@@ -3,12 +3,206 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Touch Economy Analytics</title>
-    <!-- Tailwind CSS for styling -->
+    <title>The Touch Economy Analytics Board</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body class="bg-slate-950 text-slate-100">
+
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Simplified SVG Icon Components
+        const ShieldAlert = () => (
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500"><path d="M20 13c0 5-3.5 7.5-7.66 9.7a1 1 0 0 1-.68 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 .76-.97l8-2a1 1 0 0 1 .48 0l8 2A1 1 0 0 1 20 6z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+        );
+        const Zap = () => (
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        );
+        const Activity = () => (
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        );
+        const TrendingUp = () => (
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-sky-400"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+        );
+
+        function App() {
+          const [system, setSystem] = useState('motion');
+          const [currentPossessionTime, setCurrentPossessionTime] = useState(0);
+          const [isTimerRunning, setIsTimerRunning] = useState(false);
+          const [activePlayer, setActivePlayer] = useState(null);
+          const [currentSequence, setCurrentSequence] = useState([]);
+          const [gameStats, setGameStats] = useState({
+            totalPossessions: 42,
+            avgSecondsPerTouch: 1.9,
+            flowZoneMakes: 12, flowZoneTotal: 20,
+            execZoneMakes: 8, execZoneTotal: 15,
+            panicZoneMakes: 2, panicZoneTotal: 7,
+            ghostAlerts: ['#5 (C) - 5 straight ghost possessions in Q3'],
+            dribbleTaxDropoff: 'Spot-up efficiency drops from 44% to 19% when ball is held > 5 seconds.'
+          });
+
+          const players = [
+            { id: 1, role: 'PG', name: '#1 Base', x: '50%', y: '75%' },
+            { id: 2, role: 'SG', name: '#2 Star', x: '25%', y: '50%' },
+            { id: 3, role: 'SF', name: '#3 Wing', x: '75%', y: '50%' },
+            { id: 4, role: 'PF', name: '#4 Stretch', x: '35%', y: '25%' },
+            { id: 5, role: 'C', name: '#5 Big', x: '50%', y: '15%' },
+          ];
+
+          useEffect(() => {
+            let interval;
+            if (isTimerRunning) {
+              interval = setInterval(() => {
+                setCurrentPossessionTime((prev) => prev + 1);
+              }, 1000);
+            }
+            return () => clearInterval(interval);
+          }, [isTimerRunning]);
+
+          const handlePlayerTouch = (player) => {
+            if (!isTimerRunning) setIsTimerRunning(true);
+            setActivePlayer(player.id);
+            setCurrentSequence((prev) => [...prev, { player: player.role, timeStamp: currentPossessionTime }]);
+          };
+
+          const handleEndPossession = (outcome) => {
+            setIsTimerRunning(false);
+            if (currentSequence.length === 0) return;
+            const finalTime = currentPossessionTime;
+            
+            setGameStats((prev) => {
+              const updated = { ...prev, totalPossessions: prev.totalPossessions + 1 };
+              if (finalTime <= 6) {
+                updated.flowZoneTotal += 1;
+                if (outcome === 'MAKE') updated.flowZoneMakes += 1;
+              } else if (finalTime <= 14) {
+                updated.execZoneTotal += 1;
+                if (outcome === 'MAKE') updated.execZoneMakes += 1;
+              } else {
+                updated.panicZoneTotal += 1;
+                if (outcome === 'MAKE') updated.panicZoneMakes += 1;
+              }
+              return updated;
+            });
+
+            setCurrentPossessionTime(0);
+            setActivePlayer(null);
+            setCurrentSequence([]);
+          };
+
+          const calcPct = (makes, total) => (total > 0 ? ((makes / total) * 100).toFixed(1) : 0);
+
+          return (
+            <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8">
+              <header className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center border-b border-slate-800 pb-6 mb-8 gap-4">
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-black bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-300 bg-clip-text text-transparent">
+                    THE TOUCH ECONOMY
+                  </h1>
+                  <p className="text-xs md:text-sm text-slate-400 mt-1">Post-Game Film Translation Board • Tactical Strategy Prototype</p>
+                </div>
+                <div className="bg-slate-900 border border-slate-800 p-1.5 rounded-xl flex gap-2">
+                  <button onClick={() => setSystem('motion')} className={`px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition-all ${system === 'motion' ? 'bg-orange-500 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}>Motion / Share System</button>
+                  <button onClick={() => setSystem('isolation')} className={`px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition-all ${system === 'isolation' ? 'bg-orange-500 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}>Star-Heavy / Isolation</button>
+                </div>
+              </header>
+
+              <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <section className="lg:col-span-5 bg-slate-900/50 border border-slate-800 rounded-2xl p-6 flex flex-col backdrop-blur-sm">
+                  <div className="mb-4">
+                    <h2 className="text-lg font-bold flex items-center gap-2 text-slate-200"><Activity /> Live Film Tracker Input Module</h2>
+                    <p className="text-xs text-slate-400">Click a position when they capture the ball past half-court.</p>
+                  </div>
+
+                  <div className="relative w-full aspect-[4/3] bg-slate-950 border-2 border-slate-800 rounded-xl overflow-hidden flex items-center justify-center shadow-inner">
+                    {players.map((player) => (
+                      <button key={player.id} onClick={() => handlePlayerTouch(player)} style={{ left: player.x, top: player.y }} className={`absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center w-14 h-14 rounded-full font-black text-xs border-2 transition-all duration-150 active:scale-95 ${activePlayer === player.id ? 'bg-amber-500 border-white text-slate-950 ring-4 ring-amber-500/30' : 'bg-slate-900 border-slate-700 text-slate-200 hover:border-orange-500'}`}>
+                        <span>{player.role}</span>
+                      </button>
+                    ))}
+                    <div className="absolute top-4 right-4 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg font-mono text-xs text-orange-400">Half-Court Clock: {currentPossessionTime}s</div>
+                  </div>
+
+                  <div className="mt-4 bg-slate-950 border border-slate-800 rounded-xl p-3 min-h-[60px]">
+                    <div className="text-[11px] text-slate-400 uppercase tracking-wider font-bold mb-1">Active Sequence:</div>
+                    <div className="flex flex-wrap gap-1.5 text-xs">
+                      {currentSequence.length === 0 ? <span className="text-slate-600 italic">Click positions to track...</span> : currentSequence.map((seq, i) => <span key={i} className="bg-slate-900 border border-slate-800 px-2 py-1 rounded text-slate-300 font-mono">{seq.player} ({seq.timeStamp}s)</span>)}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3 mt-4">
+                    <button onClick={() => handleEndPossession('MAKE')} className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs uppercase tracking-wider">Make</button>
+                    <button onClick={() => handleEndPossession('MISS')} className="bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 rounded-xl text-xs uppercase tracking-wider">Miss</button>
+                    <button onClick={() => handleEndPossession('TURNOVER')} className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2 rounded-xl text-xs uppercase tracking-wider border border-slate-700">Turnover</button>
+                  </div>
+                </section>
+
+                <section className="lg:col-span-7 flex flex-col gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="bg-slate-900/40 border border-slate-800 p-4 rounded-xl">
+                      <span className="text-xs text-slate-400 font-bold block mb-1">BALL VELOCITY INDEX</span>
+                      <div className="text-2xl font-black text-emerald-400">{gameStats.avgSecondsPerTouch}s</div>
+                    </div>
+                    <div className="bg-slate-900/40 border border-slate-800 p-4 rounded-xl">
+                      <span className="text-xs text-slate-400 font-bold block mb-1">TOTAL LOGGED RUNS</span>
+                      <div className="text-2xl font-black text-sky-400">{gameStats.totalPossessions}</div>
+                    </div>
+                    <div className="bg-slate-900/40 border border-slate-800 p-4 rounded-xl">
+                      <span className="text-xs text-slate-400 font-bold block mb-1">GHOST ALERT STATUS</span>
+                      <div className="text-xs font-black text-amber-500 truncate mt-1">⚠️ Flagged: #5 Big (Q3)</div>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-900/30 border border-slate-800 rounded-2xl p-5">
+                    <h3 className="text-sm font-black text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-2"><TrendingUp /> Time-Based Shooting Matrix</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex justify-between text-xs font-mono mb-1"><span className="text-emerald-400 font-bold">Flow Zone (0-6s)</span><span>{calcPct(gameStats.flowZoneMakes, gameStats.flowZoneTotal)}% Efficiency</span></div>
+                        <div className="w-full bg-slate-950 h-2.5 rounded-full"><div className="bg-emerald-400 h-2.5 rounded-full" style={{ width: `${calcPct(gameStats.flowZoneMakes, gameStats.flowZoneTotal)}%` }}></div></div>
+                      </div>
+                      <div>
+                        <div className="flex justify-between text-xs font-mono mb-1"><span className="text-sky-400 font-bold">Execution Zone (7-14s)</span><span>{calcPct(gameStats.execZoneMakes, gameStats.execZoneTotal)}% Efficiency</span></div>
+                        <div className="w-full bg-slate-950 h-2.5 rounded-full"><div className="bg-sky-400 h-2.5 rounded-full" style={{ width: `${calcPct(gameStats.execZoneMakes, gameStats.execZoneTotal)}%` }}></div></div>
+                      </div>
+                      <div>
+                        <div className="flex justify-between text-xs font-mono mb-1"><span className="text-rose-500 font-bold">Panic Zone (15s+)</span><span>{calcPct(gameStats.panicZoneMakes, gameStats.panicZoneTotal)}% Efficiency</span></div>
+                        <div className="w-full bg-slate-950 h-2.5 rounded-full"><div className="bg-rose-500 h-2.5 rounded-full" style={{ width: `${calcPct(gameStats.panicZoneMakes, gameStats.panicZoneTotal)}%` }}></div></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 relative">
+                    <h3 className="text-base font-bold text-slate-200 mb-4 flex items-center gap-2"><ShieldAlert /> Coach's Post-Game Briefing Report</h3>
+                    <div className="space-y-4 text-xs md:text-sm text-slate-300">
+                      <div>
+                        <h4 className="font-bold border-b border-slate-800 pb-1 mb-2 text-xs uppercase tracking-wider text-orange-400">1. Structural Diagnostic Insights</h4>
+                        <ul className="list-disc pl-4 space-y-1">
+                          <li><strong>System Engagement Breakdowns:</strong> {system === 'motion' ? "Roster velocity functions smoothly, but metrics indicate spatial holding flags when the ball fails to cross the key line early." : "Star-dominated over-holding phases are creating heavy systemic degradation. Catch-and-shoot metrics tank when players sit cold for 4+ runs."}</li>
+                          <li><strong>The Stagnant Dribble Tax:</strong> {gameStats.dribbleTaxDropoff}</li>
+                        </ul>
+                      </div>
+                      <div>
+                        <h4 className="font-bold border-b border-slate-800 pb-1 mb-2 text-xs uppercase tracking-wider text-orange-400">2. Practice Blueprint Adjustments</h4>
+                        <div className="bg-slate-950 rounded-xl p-3 border border-slate-800 font-mono text-xs text-slate-400 space-y-1">
+                          <div><span className="text-amber-400 font-bold">📢 Core Emphasis:</span> "Our metrics reveal an elite {calcPct(gameStats.flowZoneMakes, gameStats.flowZoneTotal)}% efficiency window in early Flow phases. Stagnation kills conversion. Keep the leather flying."</div>
+                          <div><span className="text-sky-400 font-bold">🏀 Drill Target:</span> Conduct half-court scrimmage blocks with strict 14-second parameter constraints to force immediate alternative read execution.</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </main>
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
 </body>
 </html>
