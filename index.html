@@ -6,7 +6,7 @@
     <title>The Touch Economy Analytics Platform</title>
     <!-- Tailwind CSS for Styling -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <!-- React and Babel via CDN to run directly in browser without building -->
+    <!-- React and Babel via CDN -->
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -18,10 +18,7 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // Simplified SVG Icon Components
-        const ShieldAlert = () => (
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-orange-500"><path d="M20 13c0 5-3.5 7.5-7.66 9.7a1 1 0 0 1-.68 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 .76-.97l8-2a1 1 0 0 1 .48 0l8 2A1 1 0 0 1 20 6z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
-        );
+        // SVG Icon Components
         const Activity = () => (
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         );
@@ -31,23 +28,38 @@
         const Users = () => (
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-400"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         );
+        const Clipboard = () => (
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+        );
 
         function App() {
           // View State: 'setup' or 'dashboard'
-          const [view, setView] = useState('setup');
+          const [view, setView] = useState(() => {
+            const savedView = localStorage.getItem('te_view');
+            return savedView || 'setup';
+          });
           
           // Setup Configuration State
-          const [gameTitle, setGameTitle] = useState('JUCO Scrimmage Baseline');
-          const [system, setSystem] = useState('motion');
-          const [fullRoster, setFullRoster] = useState([
-            { id: 1, number: '1', name: 'Macaraeg', role: 'PG', active: true },
-            { id: 2, number: '2', name: 'Star Player', role: 'SG', active: true },
-            { id: 3, number: '3', name: 'Wing Out', role: 'SF', active: true },
-            { id: 4, number: '4', name: 'Stretch Big', role: 'PF', active: true },
-            { id: 5, number: '5', name: 'Center Anchor', role: 'C', active: true },
-            { id: 6, number: '11', name: 'Bench Guard', role: 'G', active: false },
-            { id: 7, number: '23', name: 'Bench Forward', role: 'F', active: false }
-          ]);
+          const [gameTitle, setGameTitle] = useState(() => {
+            return localStorage.getItem('te_gameTitle') || 'High School Varsity Baseline';
+          });
+          
+          const [fullRoster, setFullRoster] = useState(() => {
+            const savedRoster = localStorage.getItem('te_fullRoster');
+            if (savedRoster) return JSON.parse(savedRoster);
+            return [
+              { id: 1, number: '1', name: 'Adrian', role: 'PG', active: true },
+              { id: 2, number: '2', name: 'Star Player', role: 'SG', active: true },
+              { id: 3, number: '3', name: 'Wing Out', role: 'SF', active: true },
+              { id: 4, number: '4', name: 'Stretch Big', role: 'PF', active: true },
+              { id: 5, number: '5', name: 'Center Anchor', role: 'C', active: true }
+            ];
+          });
+
+          // New player input states
+          const [newPlayerName, setNewPlayerName] = useState('');
+          const [newPlayerNumber, setNewPlayerNumber] = useState('');
+          const [newPlayerRole, setNewPlayerRole] = useState('G');
 
           // Live Tracking Possession State
           const [currentPossessionTime, setCurrentPossessionTime] = useState(0);
@@ -56,24 +68,36 @@
           const [currentSequence, setCurrentSequence] = useState([]);
           const [selectedLocation, setSelectedLocation] = useState('LAYUP');
           
-          // Running Session Game Statistics
-          const [gameStats, setGameStats] = useState({
-            totalPossessions: 14,
-            avgSecondsPerTouch: 2.1,
-            // Shots Breakdown Matrix
-            layupMakes: 4, layupTotal: 6,
-            middyMakes: 2, middyTotal: 5,
-            threeMakes: 1, threeTotal: 3,
-            // Phase Breakdown
-            flowZoneMakes: 5, flowZoneTotal: 7,
-            execZoneMakes: 2, execZoneTotal: 5,
-            panicZoneMakes: 0, panicZoneTotal: 2,
-            turnovers: 2,
-            liveTacticalNotes: [
-              "💡 Possession #4 Note: System velocity remains elite when ball crosses half-court inside 3 seconds.",
-              "💡 Possession #9 Note: High-friction holding patterns emerging during isolations."
-            ]
+          // Cleaned Session Statistics starting completely at 0/0
+          const [gameStats, setGameStats] = useState(() => {
+            const savedStats = localStorage.getItem('te_gameStats');
+            if (savedStats) return JSON.parse(savedStats);
+            return {
+              totalPossessions: 0,
+              avgSecondsPerTouch: 0,
+              totalTouchesAcrossGame: 0,
+              // Shots Breakdown Matrix
+              layupMakes: 0, layupTotal: 0,
+              middyMakes: 0, middyTotal: 0,
+              threeMakes: 0, threeTotal: 0,
+              // Phase Breakdown
+              flowZoneMakes: 0, flowZoneTotal: 0,
+              execZoneMakes: 0, execZoneTotal: 0,
+              panicZoneMakes: 0, panicZoneTotal: 0,
+              turnovers: 0,
+              liveTacticalNotes: [],
+              // Total accumulation of touches per specific player ID across entire game session
+              playerTotalTouches: {} 
+            };
           });
+
+          // Persistent Sync Engine using local storage updates
+          useEffect(() => {
+            localStorage.setItem('te_view', view);
+            localStorage.setItem('te_gameTitle', gameTitle);
+            localStorage.setItem('te_fullRoster', JSON.stringify(fullRoster));
+            localStorage.setItem('te_gameStats', JSON.stringify(gameStats));
+          }, [view, gameTitle, fullRoster, gameStats]);
 
           // Timer Execution Loop
           useEffect(() => {
@@ -86,79 +110,103 @@
             return () => clearInterval(interval);
           }, [isTimerRunning]);
 
-          // Handle Custom Roster Updates in Setup View
+          // Handle Roster Variations
           const handleRosterNameChange = (id, newName) => {
             setFullRoster(prev => prev.map(p => p.id === id ? { ...p, name: newName } : p));
           };
 
-          // Toggle Active Status (Who is on the floor right now)
-          const toggleOnCourt = (id) => {
-            const activeCount = fullRoster.filter(p => p.active).length;
-            setFullRoster(prev => prev.map(p => {
-              if (p.id === id) {
-                if (!p.active && activeCount >= 5) {
-                  alert("Maximum of 5 players allowed on the court at once!");
-                  return p;
-                }
-                return { ...p, active: !p.active };
+          const handleRosterNumberChange = (id, newNum) => {
+            setFullRoster(prev => prev.map(p => p.id === id ? { ...p, number: newNum } : p));
+          };
+
+          const addNewPlayer = () => {
+            if (!newPlayerName.trim() || !newPlayerNumber.trim()) {
+              alert("Please input both a name and a jersey number to add a player.");
+              return;
+            }
+            const newPlayer = {
+              id: Date.now(),
+              number: newPlayerNumber.trim(),
+              name: newPlayerName.trim(),
+              role: newPlayerRole,
+              active: false
+            };
+            setFullRoster(prev => [...prev, newPlayer]);
+            setNewPlayerName('');
+            setNewPlayerNumber('');
+          };
+
+          // On-The-Fly Rotation Management (Live Substitution Engine)
+          const handleSubstitution = (idToToggle) => {
+            const playerToToggle = fullRoster.find(p => p.id === idToToggle);
+            if (!playerToToggle) return;
+
+            if (!playerToToggle.active) {
+              const currentActiveCount = fullRoster.filter(p => p.active).length;
+              if (currentActiveCount >= 5) {
+                alert("There are already 5 players on the floor. Bench an active player first before subbing this player in.");
+                return;
               }
-              return p;
-            }));
+            }
+            
+            // Swap active node assignment state
+            setFullRoster(prev => prev.map(p => p.id === idToToggle ? { ...p, active: !p.active } : p));
+            
+            // Drop tracking link safely if active player was subbed out mid-possession
+            if (playerToToggle.id === activePlayer) {
+              setActivePlayer(null);
+            }
           };
 
           const activeOnCourtPlayers = fullRoster.filter(p => p.active);
 
-          // Spatial map coordinate assignments for active court players
+          // Fixed layout geometric court coordinates for up to 5 players
           const courtCoordinates = [
-            { x: '50%', y: '78%' }, // Spot 1
-            { x: '22%', y: '55%' }, // Spot 2
-            { x: '78%', y: '55%' }, // Spot 3
-            { x: '35%', y: '30%' }, // Spot 4
-            { x: '50%', y: '18%' }  // Spot 5
+            { x: '50%', y: '78%' }, // Slot 1
+            { x: '22%', y: '55%' }, // Slot 2
+            { x: '78%', y: '55%' }, // Slot 3
+            { x: '35%', y: '30%' }, // Slot 4
+            { x: '50%', y: '18%' }  // Slot 5
           ];
 
-          const handlePlayerTouch = (player, index) => {
+          const handlePlayerTouch = (player) => {
             if (!isTimerRunning) setIsTimerRunning(true);
             setActivePlayer(player.id);
-            
-            // Logic to calculate dynamic hold metrics
-            const currentTouchesCount = currentSequence.filter(s => s.playerId === player.id).length;
             setCurrentSequence((prev) => [
               ...prev, 
               { 
                 role: player.role, 
                 name: player.name, 
                 playerId: player.id, 
-                timeStamp: currentPossessionTime,
-                isInitial: prev.length === 0
+                timeStamp: currentPossessionTime 
               }
             ]);
           };
 
+          // Primary Analytical Sequence Logic: Commits updates ONLY when tracking sequence terminal is verified
           const handleEndPossession = (outcome) => {
             setIsTimerRunning(false);
             if (currentSequence.length === 0) return;
 
             const finalTime = currentPossessionTime;
-            const firstTouch = currentSequence[0];
             const lastTouch = currentSequence[currentSequence.length - 1];
 
-            // Real-Time Note Generation Engine: Scans logs to drop adaptive coaching remarks automatically
-            let newLiveNote = null;
-            if (finalTime >= 12 && outcome === 'MISS') {
-              newLiveNote = `⏳ Warning: Possession ended late (${finalTime}s) on a missed ${selectedLocation.toLowerCase()} by ${lastTouch.name}. Attack stagnated.`;
-            } else if (firstTouch && finalTime <= 6 && outcome === 'MAKE') {
-              newLiveNote = `⚡ Flash Execution: ${firstTouch.name} initialized an early transition attack resulting in a converted ${selectedLocation.toLowerCase()}.`;
-            } else if (currentSequence.length >= 4 && outcome === 'MAKE') {
-              newLiveNote = `🎯 Ball Flow Reward: High inclusivity string (${currentSequence.length} touches) yielded an open made ${selectedLocation.toLowerCase()}.`;
-            } else if (outcome === 'TURNOVER') {
-              newLiveNote = `⚠️ Possession Turnover registered at the ${finalTime}s mark following ball containment sequence.`;
-            }
+            // Generate localized dynamic telemetry comments
+            let calculatedNote = `Possession #${gameStats.totalPossessions + 1}: ${currentSequence.length} touch sequence over ${finalTime} seconds ended in a ${outcome.toLowerCase()} (${selectedLocation.toLowerCase()}) by ${lastTouch.name}.`;
 
             setGameStats((prev) => {
               const updated = { ...prev, totalPossessions: prev.totalPossessions + 1 };
               
-              // Handle Shot Location Breakdown Tracking
+              // Increment global touch counters
+              updated.totalTouchesAcrossGame += currentSequence.length;
+              
+              // Map specific touch logs map inside game memory
+              currentSequence.forEach((touch) => {
+                const currentCount = updated.playerTotalTouches[touch.playerId] || 0;
+                updated.playerTotalTouches[touch.playerId] = currentCount + 1;
+              });
+
+              // Apply contextual filters based on selection parameter attributes
               if (outcome === 'MAKE') {
                 if (selectedLocation === 'LAYUP') { updated.layupMakes += 1; updated.layupTotal += 1; }
                 if (selectedLocation === 'MIDDY') { updated.middyMakes += 1; updated.middyTotal += 1; }
@@ -171,7 +219,7 @@
                 updated.turnovers += 1;
               }
 
-              // Handle Half-Court Time Phase Accumulation
+              // Evaluate possession timeline ranges
               if (finalTime <= 6) {
                 updated.flowZoneTotal += 1;
                 if (outcome === 'MAKE') updated.flowZoneMakes += 1;
@@ -183,37 +231,67 @@
                 if (outcome === 'MAKE') updated.panicZoneMakes += 1;
               }
 
-              // Append Live Reactive Note if generated
-              if (newLiveNote) {
-                updated.liveTacticalNotes = [newLiveNote, ...prev.liveTacticalNotes];
-              }
+              // Compute moving average metrics
+              updated.avgSecondsPerTouch = updated.totalPossessions > 0 ? (updated.totalTouchesAcrossGame / updated.totalPossessions).toFixed(1) : 0;
+
+              // Append verified terminal telemetry feed note
+              updated.liveTacticalNotes = [calculatedNote, ...prev.liveTacticalNotes];
 
               return updated;
             });
 
-            // Reset execution state
+            // Re-initialize session counters for subsequent execution path
             setCurrentPossessionTime(0);
             setActivePlayer(null);
             setCurrentSequence([]);
           };
 
-          const calcPct = (makes, total) => (total > 0 ? ((makes / total) * 100).toFixed(1) : 0);
+          // Reset baseline numbers back to absolute zero
+          const clearAllSessionData = () => {
+            if(confirm("Are you sure you want to erase all accumulated session data? This restarts all tracked percentages back to zero.")) {
+              const resetStats = {
+                totalPossessions: 0,
+                avgSecondsPerTouch: 0,
+                totalTouchesAcrossGame: 0,
+                layupMakes: 0, layupTotal: 0,
+                middyMakes: 0, middyTotal: 0,
+                threeMakes: 0, threeTotal: 0,
+                flowZoneMakes: 0, flowZoneTotal: 0,
+                execZoneMakes: 0, execZoneTotal: 0,
+                panicZoneMakes: 0, panicZoneTotal: 0,
+                turnovers: 0,
+                liveTacticalNotes: [],
+                playerTotalTouches: {}
+              };
+              setGameStats(resetStats);
+              localStorage.setItem('te_gameStats', JSON.stringify(resetStats));
+            }
+          };
 
-          // VIEW 1: GAME CONFIGURATION & PRE-GAME SETUP MENU
+          const calcPct = (makes, total) => (total > 0 ? ((makes / total) * 100).toFixed(1) : "0.0");
+
+          // Calculate normalized "Touches per 5 Possessions" window metrics
+          const getTouchesPerFivePossessions = (playerId) => {
+            if (gameStats.totalPossessions === 0) return "0.0";
+            const rawTouches = gameStats.playerTotalTouches[playerId] || 0;
+            return ((rawTouches / gameStats.totalPossessions) * 5).toFixed(1);
+          };
+
+          // VIEW 1: PRE-GAME SETUP & ROSTER CREATION MENU
           if (view === 'setup') {
             return (
               <div className="min-h-screen bg-slate-950 text-slate-100 p-6 md:p-12 flex items-center justify-center">
                 <div className="max-w-2xl w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl">
-                  <div className="text-center mb-8">
-                    <span className="bg-orange-500/10 text-orange-400 font-mono text-xs px-3 py-1 rounded-full border border-orange-500/20 font-bold uppercase tracking-widest">Setup Configuration Module</span>
-                    <h1 className="text-3xl font-black mt-3 bg-gradient-to-r from-orange-500 to-amber-400 bg-clip-text text-transparent">START NEW TRACKING SESSION</h1>
-                    <p className="text-sm text-slate-400 mt-1">Initialize game parameters and assign active on-court roster nodes.</p>
+                  <div className="text-center mb-6">
+                    <span className="bg-orange-500/10 text-orange-400 font-mono text-xs px-3 py-1 rounded-full border border-orange-500/20 font-bold uppercase tracking-widest"> Roster & Parameter Setup</span>
+                    <h1 className="text-3xl font-black mt-3 bg-gradient-to-r from-orange-500 to-amber-400 bg-clip-text text-transparent">TOUCH ECONOMY TRACKER</h1>
+                    <p className="text-sm text-slate-400 mt-1">Configure active rosters, jersey tracking numbers, and deploy monitoring panels.</p>
                   </div>
 
                   <div className="space-y-6">
-                    {/* Game Title Metadata Input */}
+                    {/* Game Identifier */}
                     <div>
-                      <label className="block text-xs uppercase font-black tracking-wider text-slate-400 mb-2">Game Designation Title</label>
+                      <label className="block text-xs uppercase font-black tracking-wider text-slate-400 mb-2">Game Event Title</label>
                       <input 
                         type="text" 
                         value={gameTitle} 
@@ -222,64 +300,96 @@
                       />
                     </div>
 
-                    {/* Offensive System Preset Selector */}
-                    <div>
-                      <label className="block text-xs uppercase font-black tracking-wider text-slate-400 mb-2">Offensive System Benchmark Architecture</label>
-                      <div className="grid grid-cols-2 gap-4">
-                        <button onClick={() => setSystem('motion')} className={`p-4 rounded-xl border text-left font-bold transition-all ${system === 'motion' ? 'bg-slate-950 border-orange-500 text-orange-400 shadow-md' : 'bg-slate-950/40 border-slate-800 text-slate-400'}`}>
-                          <div className="text-sm">Motion / Share System</div>
-                          <div className="text-[10px] font-normal mt-1 opacity-60">Benchmarks tracking for quick ball velocity and touch distribution profiles.</div>
-                        </button>
-                        <button onClick={() => setSystem('isolation')} className={`p-4 rounded-xl border text-left font-bold transition-all ${system === 'isolation' ? 'bg-slate-950 border-orange-500 text-orange-400 shadow-md' : 'bg-slate-950/40 border-slate-800 text-slate-400'}`}>
-                          <div className="text-sm">Star-Heavy / Isolation</div>
-                          <div className="text-[10px] font-normal mt-1 opacity-60">Adjusts metrics to look at catch-and-shoot cold thresholds and dribble stagnation.</div>
-                        </button>
+                    {/* Add New Player Sub-Form Component */}
+                    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800/60">
+                      <label className="block text-xs uppercase font-black tracking-wider text-slate-400 mb-2">Add New Player to Roster Pool</label>
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                        <input 
+                          type="text" 
+                          placeholder="Player Name" 
+                          value={newPlayerName}
+                          onChange={(e) => setNewPlayerName(e.target.value)}
+                          className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-orange-500 sm:col-span-2"
+                        />
+                        <input 
+                          type="text" 
+                          placeholder="Jersey #" 
+                          value={newPlayerNumber}
+                          onChange={(e) => setNewPlayerNumber(e.target.value)}
+                          className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-orange-500"
+                        />
+                        <select 
+                          value={newPlayerRole} 
+                          onChange={(e) => setNewPlayerRole(e.target.value)}
+                          className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-2 text-xs focus:outline-none focus:border-orange-500 text-slate-300"
+                        >
+                          <option value="PG">PG</option>
+                          <option value="SG">SG</option>
+                          <option value="SF">SF</option>
+                          <option value="PF">PF</option>
+                          <option value="C">C</option>
+                          <option value="G">G</option>
+                          <option value="F">F</option>
+                        </select>
                       </div>
+                      <button 
+                        onClick={addNewPlayer}
+                        className="w-full mt-3 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-bold py-2 rounded-lg text-xs transition-all"
+                      >
+                        + Append Player to Squad Registry
+                      </button>
                     </div>
 
-                    {/* Roster Assignment Sub-panel */}
+                    {/* Editable Pool Block */}
                     <div>
                       <div className="flex justify-between items-center mb-2">
-                        <label className="block text-xs uppercase font-black tracking-wider text-slate-400">Team Roster Setup (Select Exactly 5 On-Court)</label>
-                        <span className="text-xs font-mono text-orange-400 font-bold">{fullRoster.filter(p=>p.active).length} / 5 Selected</span>
+                        <label className="block text-xs uppercase font-black tracking-wider text-slate-400">Roster Registry & Floor Assignment (Select Exactly 5 Active)</label>
+                        <span className="text-xs font-mono text-orange-400 font-bold">{fullRoster.filter(p=>p.active).length} / 5 Active On Court</span>
                       </div>
                       
-                      <div className="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden divide-y divide-slate-900">
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden max-h-[220px] overflow-y-auto divide-y divide-slate-900">
                         {fullRoster.map((player) => (
                           <div key={player.id} className="p-3 flex items-center justify-between gap-4">
                             <div className="flex items-center gap-3 flex-1">
-                              <span className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center font-mono text-xs text-slate-400 font-bold">#{player.number}</span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] text-slate-500 font-bold">#</span>
+                                <input 
+                                  type="text" 
+                                  value={player.number}
+                                  onChange={(e) => handleRosterNumberChange(player.id, e.target.value)}
+                                  className="w-10 bg-slate-900 border border-slate-800 rounded text-center text-xs text-orange-400 font-mono font-bold py-1"
+                                />
+                              </div>
                               <input 
                                 type="text" 
                                 value={player.name}
                                 onChange={(e) => handleRosterNameChange(player.id, e.target.value)}
-                                className="bg-transparent border-b border-transparent hover:border-slate-800 focus:border-orange-500 focus:outline-none text-sm font-bold text-slate-200 py-0.5 px-1 flex-1"
+                                className="bg-transparent border-b border-transparent hover:border-slate-800 focus:border-orange-500 focus:outline-none text-xs font-bold text-slate-200 py-1 px-1 flex-1"
                               />
-                              <span className="text-[10px] bg-slate-900 border border-slate-800 text-slate-500 px-2 py-0.5 rounded uppercase font-bold">{player.role}</span>
+                              <span className="text-[9px] bg-slate-900 border border-slate-800 text-slate-500 px-1.5 py-0.5 rounded font-bold uppercase">{player.role}</span>
                             </div>
                             <button 
                               onClick={() => toggleOnCourt(player.id)}
-                              className={`px-3 py-1 rounded-lg text-xs font-black uppercase transition-all ${player.active ? 'bg-orange-500/10 text-orange-400 border border-orange-500/30' : 'bg-slate-900 border border-slate-800 text-slate-500'}`}
+                              className={`px-3 py-1 rounded-lg text-[11px] font-black uppercase transition-all ${player.active ? 'bg-orange-500/10 text-orange-400 border border-orange-500/30' : 'bg-slate-900 border border-slate-800 text-slate-500'}`}
                             >
-                              {player.active ? 'On Floor' : 'Bench'}
+                              {player.active ? 'On Court' : 'Bench'}
                             </button>
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    {/* Setup Authorization Execution Launch Button */}
                     <button 
                       onClick={() => {
                         if (fullRoster.filter(p=>p.active).length !== 5) {
-                          alert("You must select exactly 5 active players for the court tracking positions before continuing!");
+                          alert("Configuration error: You must select exactly 5 active players to occupy the court tracking slots before continuing!");
                           return;
                         }
                         setView('dashboard');
                       }}
-                      className="w-full bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white font-black py-3 rounded-xl uppercase text-sm tracking-wider transition-all shadow-xl mt-4"
+                      className="w-full bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white font-black py-3 rounded-xl uppercase text-xs tracking-wider transition-all shadow-xl"
                     >
-                      Initialize Analytics Board ➔
+                      Initialize Metrics Board ➔
                     </button>
                   </div>
                 </div>
@@ -287,87 +397,85 @@
             );
           }
 
-          // VIEW 2: ACTIVE ANALYTICS DASHBOARD ENGINE
+          // VIEW 2: ACTIVE RUN ANALYTICS LOGGING SUITE
           return (
             <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-4 md:p-8">
-              {/* Header Navigation Area */}
-              <header className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center border-b border-slate-800 pb-6 mb-8 gap-4">
+              {/* Contextual Board Header */}
+              <header className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center border-b border-slate-800 pb-5 mb-6 gap-4">
                 <div>
                   <div className="flex items-center gap-3">
-                    <h1 className="text-2xl md:text-3xl font-black bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-300 bg-clip-text text-transparent">THE TOUCH ECONOMY</h1>
-                    <span className="text-xs bg-slate-900 border border-slate-800 text-slate-400 px-2 py-0.5 rounded-md font-bold mt-1 uppercase tracking-tight">{gameTitle}</span>
+                    <h1 className="text-xl md:text-2xl font-black bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-300 bg-clip-text text-transparent">THE TOUCH ECONOMY MONITOR</h1>
+                    <span className="text-xs bg-slate-900 border border-slate-800 text-slate-300 px-2.5 py-0.5 rounded-md font-mono font-bold mt-0.5 uppercase">{gameTitle}</span>
                   </div>
-                  <p className="text-xs text-slate-400 mt-1">Telemetry Dashboard Engine • Automated Live-Rule Contextual Diagnostics</p>
+                  <p className="text-xs text-slate-400 mt-0.5">Verified Sequential Recording Environment • Storage State Synchronized</p>
                 </div>
                 
-                <div className="flex items-center gap-4">
-                  <button onClick={() => setView('setup')} className="text-xs bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 px-3 py-2 rounded-xl font-bold transition-all">
-                    ⚙️ Return to Setup Menu
+                <div className="flex items-center gap-3">
+                  <button onClick={clearAllSessionData} className="text-xs bg-rose-950/40 hover:bg-rose-900/40 border border-rose-900/40 text-rose-400 px-3 py-2 rounded-xl font-bold transition-all">
+                    Reset Stats
                   </button>
-                  <div className="bg-slate-900 border border-slate-800 p-1 rounded-xl text-xs font-mono font-bold text-orange-400 px-3 py-2">
-                    System Mode: {system === 'motion' ? 'Motion / Share' : 'Star Isolation'}
-                  </div>
+                  <button onClick={() => setView('setup')} className="text-xs bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 px-3 py-2 rounded-xl font-bold transition-all">
+                    ⚙️ Roster / Roster Configuration
+                  </button>
                 </div>
               </header>
 
-              {/* Main Workspace Layout Frame */}
-              <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {/* Central Framework Architecture Grid */}
+              <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
                 
-                {/* Left Panel: Tracker Court Input Interface */}
-                <section className="lg:col-span-5 bg-slate-900/50 border border-slate-800 rounded-2xl p-6 flex flex-col backdrop-blur-sm">
-                  <div className="mb-4 flex justify-between items-start">
-                    <div>
-                      <h2 className="text-base font-bold flex items-center gap-2 text-slate-200"><Activity /> Tactical Half-Court Telemetry</h2>
-                      <p className="text-xs text-slate-400">Tap court nodes as ball transactions occur in real-time.</p>
-                    </div>
+                {/* Left Telemetry Column Module */}
+                <section className="lg:col-span-5 bg-slate-900/50 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between backdrop-blur-sm">
+                  <div className="mb-3">
+                    <h2 className="text-sm font-black flex items-center gap-2 text-slate-200 uppercase tracking-wide"><Activity /> Half-Court Capture Node Terminal</h2>
+                    <p className="text-[11px] text-slate-400">Map ball execution touches in sequence. Sub floor nodes using the right alignment controls instantly.</p>
                   </div>
 
-                  {/* Half-Court Node Map Shell */}
+                  {/* Half-Court Geometric Visual Node Array Mapping */}
                   <div className="relative w-full aspect-[4/3] bg-slate-950 border-2 border-slate-800 rounded-xl overflow-hidden shadow-inner mb-4">
-                    {/* Court Marking Vector Lines */}
-                    <div className="absolute top-0 w-full h-full border-b border-slate-800/20 pointer-events-none"></div>
-                    <div className="absolute top-0 w-36 h-28 border-2 border-slate-800/40 rounded-b-xl left-1/2 transform -translate-x-1/2 pointer-events-none"></div>
-                    <div className="absolute top-0 w-72 h-56 border-2 border-slate-800/20 rounded-b-full left-1/2 transform -translate-x-1/2 pointer-events-none"></div>
+                    {/* Architectural Accent Reference Vectors */}
+                    <div className="absolute top-0 w-full h-full border-b border-slate-900/30 pointer-events-none"></div>
+                    <div className="absolute top-0 w-32 h-24 border border-slate-800/40 rounded-b-lg left-1/2 transform -translate-x-1/2 pointer-events-none"></div>
+                    <div className="absolute top-0 w-64 h-48 border border-slate-800/20 rounded-b-full left-1/2 transform -translate-x-1/2 pointer-events-none"></div>
 
                     {/* Active Court Mapping Position Nodes */}
-                    {activeOnCourtPlayers.map((player, index) => {
+                    {activeOnCourtPlayers.slice(0, 5).map((player, index) => {
                       const coords = courtCoordinates[index] || { x: '50%', y: '50%' };
                       return (
                         <button
                           key={player.id}
-                          onClick={() => handlePlayerTouch(player, index)}
+                          onClick={() => handlePlayerTouch(player)}
                           style={{ left: coords.x, top: coords.y }}
-                          className={`absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center w-16 h-16 rounded-full font-black text-xs border-2 transition-all duration-150 active:scale-95 shadow-lg ${
+                          className={`absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center w-14 h-14 rounded-full font-black text-xs border-2 transition-all duration-150 active:scale-95 shadow-md ${
                             activePlayer === player.id 
-                              ? 'bg-gradient-to-br from-orange-500 to-amber-500 border-white text-slate-950 ring-4 ring-orange-500/30' 
+                              ? 'bg-gradient-to-br from-orange-500 to-amber-500 border-white text-slate-950 ring-4 ring-orange-500/20' 
                               : 'bg-slate-900 border-slate-700 text-slate-200 hover:border-orange-500 hover:text-orange-400'
                           }`}
                         >
-                          <span className="text-[10px] font-mono tracking-tight text-slate-400 leading-none mb-0.5">#{player.number}</span>
-                          <span className="truncate max-w-[56px] text-[11px] font-black">{player.name}</span>
-                          <span className="text-[8px] font-bold opacity-50 leading-none mt-0.5 uppercase">{player.role}</span>
+                          <span className="text-[9px] font-mono font-bold text-slate-400 leading-none mb-0.5">#{player.number}</span>
+                          <span className="truncate max-w-[48px] text-[10px] font-black">{player.name}</span>
+                          <span className="text-[8px] opacity-40 leading-none mt-0.5 uppercase">{player.role}</span>
                         </button>
                       );
                     })}
 
-                    {/* Real-Time Run Stopwatch Telemetry overlay */}
-                    <div className="absolute top-4 right-4 bg-slate-950/90 border border-slate-800 px-3 py-1.5 rounded-lg font-mono text-xs text-orange-400 flex items-center gap-1.5">
-                      <span className={`w-2 h-2 rounded-full bg-orange-500 ${isTimerRunning ? 'animate-ping' : ''}`}></span>
-                      Half-Court Clock: {currentPossessionTime}s
+                    {/* Half-court Transition Stopwatch overlay */}
+                    <div className="absolute top-3 right-3 bg-slate-950/90 border border-slate-800 px-2.5 py-1 rounded-md font-mono text-[11px] text-orange-400 flex items-center gap-1.5">
+                      <span className={`w-1.5 h-1.5 rounded-full bg-orange-500 ${isTimerRunning ? 'animate-ping' : ''}`}></span>
+                      Timeline Clock: {currentPossessionTime}s
                     </div>
                   </div>
 
-                  {/* Active Sequence Log Display Terminal */}
-                  <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 min-h-[60px] mb-4">
-                    <div className="text-[10px] text-slate-500 uppercase font-black tracking-wider mb-1">Active Run Sequence Trail:</div>
-                    <div className="flex flex-wrap gap-1 text-xs items-center">
+                  {/* Active Sequential Path Display Box */}
+                  <div className="bg-slate-950 border border-slate-800 rounded-xl p-2.5 min-h-[56px] mb-3">
+                    <div className="text-[10px] text-slate-500 uppercase font-bold tracking-tight mb-0.5">Active Sequence Path Log:</div>
+                    <div className="flex flex-wrap gap-1 items-center text-xs">
                       {currentSequence.length === 0 ? (
-                        <span className="text-slate-600 italic text-xs">Awaiting half-court entry trigger trigger...</span>
+                        <span className="text-slate-600 italic text-[11px]">Awaiting initial half-court touch register...</span>
                       ) : (
                         currentSequence.map((seq, i) => (
                           <span key={i} className="flex items-center gap-1">
-                            <span className="bg-slate-900 border border-slate-800 text-slate-300 px-2 py-0.5 rounded font-mono text-[11px]">
-                              {seq.name} ({seq.timeStamp}s)
+                            <span className="bg-slate-900 border border-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-mono text-[10px]">
+                              #{fullRoster.find(p=>p.id===seq.playerId)?.number || seq.role}
                             </span>
                             {i < currentSequence.length - 1 && <span className="text-slate-700 text-[10px]">➔</span>}
                           </span>
@@ -376,15 +484,15 @@
                     </div>
                   </div>
 
-                  {/* Shot Location Advanced Attribute Selectors */}
-                  <div className="mb-4">
-                    <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Set Outcome Target Location Attribute</label>
+                  {/* Shot Location Filtering Attributes Selector */}
+                  <div className="mb-3">
+                    <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1">Set Outcome Target Location Attribute</label>
                     <div className="grid grid-cols-3 gap-2">
                       {['LAYUP', 'MIDDY', '3PT'].map((loc) => (
                         <button
                           key={loc}
                           onClick={() => setSelectedLocation(loc)}
-                          className={`py-1.5 rounded-lg text-xs font-black tracking-wide border transition-all ${selectedLocation === loc ? 'bg-orange-500/10 border-orange-500 text-orange-400' : 'bg-slate-950 border-slate-800 text-slate-500'}`}
+                          className={`py-1 rounded-lg text-xs font-black tracking-wide border transition-all ${selectedLocation === loc ? 'bg-orange-500/10 border-orange-500 text-orange-400' : 'bg-slate-950 border-slate-800 text-slate-500'}`}
                         >
                           {loc}
                         </button>
@@ -392,132 +500,158 @@
                     </div>
                   </div>
 
-                  {/* Final Operational Run Termination Controls */}
-                  <div className="grid grid-cols-3 gap-3">
-                    <button onClick={() => handleEndPossession('MAKE')} className="bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md">
-                      Hit Make
+                  {/* Master Terminal Completion Controllers */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <button onClick={() => handleEndPossession('MAKE')} className="bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2 rounded-lg text-xs uppercase tracking-wider transition-all">
+                      Log Make
                     </button>
-                    <button onClick={() => handleEndPossession('MISS')} className="bg-rose-600 hover:bg-rose-500 text-white font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md">
-                      Hit Miss
+                    <button onClick={() => handleEndPossession('MISS')} className="bg-rose-600 hover:bg-rose-500 text-white font-black py-2 rounded-lg text-xs uppercase tracking-wider transition-all">
+                      Log Miss
                     </button>
-                    <button onClick={() => handleEndPossession('TURNOVER')} className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all border border-slate-700">
+                    <button onClick={() => handleEndPossession('TURNOVER')} className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-black py-2 rounded-lg text-xs uppercase tracking-wider transition-all border border-slate-700">
                       Turnover
                     </button>
                   </div>
                 </section>
 
-                {/* Right Panel: Data Metrics and Strategy Summary Reporting */}
-                <section className="lg:col-span-7 flex flex-col gap-6">
+                {/* Right Analytics/Reporting Column Module */}
+                <section className="lg:col-span-7 flex flex-col gap-4">
                   
-                  {/* Aggregated Statistical Matrix Gauges */}
+                  {/* Dynamic Statistical Metrics Grid Split Panel */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Time Phase Split Panel */}
+                    {/* Time Phase Split Array */}
                     <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-4">
-                      <h3 className="text-xs text-slate-400 font-black tracking-wider uppercase mb-3 flex items-center gap-2"><TrendingUp /> Time-Zone Efficiency Profiles</h3>
-                      <div className="space-y-3">
+                      <h3 className="text-xs text-slate-400 font-black tracking-wider uppercase mb-2.5 flex items-center gap-1.5"><TrendingUp /> Time-Zone Efficiency Profiles</h3>
+                      <div className="space-y-2">
                         <div>
-                          <div className="flex justify-between font-mono text-[11px] mb-0.5">
+                          <div className="flex justify-between font-mono text-[10px] mb-0.5">
                             <span className="text-emerald-400 font-bold">Flow Phase (0-6s)</span>
                             <span>{gameStats.flowZoneMakes}/{gameStats.flowZoneTotal} ({calcPct(gameStats.flowZoneMakes, gameStats.flowZoneTotal)}%)</span>
                           </div>
-                          <div className="w-full bg-slate-950 h-2 rounded-full p-0.5"><div className="bg-emerald-400 h-1 rounded-full transition-all" style={{ width: `${calcPct(gameStats.flowZoneMakes, gameStats.flowZoneTotal)}%` }}></div></div>
+                          <div className="w-full bg-slate-950 h-1.5 rounded-full"><div className="bg-emerald-400 h-1.5 rounded-full transition-all" style={{ width: `${calcPct(gameStats.flowZoneMakes, gameStats.flowZoneTotal)}%` }}></div></div>
                         </div>
                         <div>
-                          <div className="flex justify-between font-mono text-[11px] mb-0.5">
+                          <div className="flex justify-between font-mono text-[10px] mb-0.5">
                             <span className="text-sky-400 font-bold">Execution Phase (7-14s)</span>
                             <span>{gameStats.execZoneMakes}/{gameStats.execZoneTotal} ({calcPct(gameStats.execZoneMakes, gameStats.execZoneTotal)}%)</span>
                           </div>
-                          <div className="w-full bg-slate-950 h-2 rounded-full p-0.5"><div className="bg-sky-400 h-1 rounded-full transition-all" style={{ width: `${calcPct(gameStats.execZoneMakes, gameStats.execZoneTotal)}%` }}></div></div>
+                          <div className="w-full bg-slate-950 h-1.5 rounded-full"><div className="bg-sky-400 h-1.5 rounded-full transition-all" style={{ width: `${calcPct(gameStats.execZoneMakes, gameStats.execZoneTotal)}%` }}></div></div>
                         </div>
                         <div>
-                          <div className="flex justify-between font-mono text-[11px] mb-0.5">
+                          <div className="flex justify-between font-mono text-[10px] mb-0.5">
                             <span className="text-rose-500 font-bold">Panic Phase (15s+)</span>
                             <span>{gameStats.panicZoneMakes}/{gameStats.panicZoneTotal} ({calcPct(gameStats.panicZoneMakes, gameStats.panicZoneTotal)}%)</span>
                           </div>
-                          <div className="w-full bg-slate-950 h-2 rounded-full p-0.5"><div className="bg-rose-500 h-1 rounded-full transition-all" style={{ width: `${calcPct(gameStats.panicZoneMakes, gameStats.panicZoneTotal)}%` }}></div></div>
+                          <div className="w-full bg-slate-950 h-1.5 rounded-full"><div className="bg-rose-500 h-1.5 rounded-full transition-all" style={{ width: `${calcPct(gameStats.panicZoneMakes, gameStats.panicZoneTotal)}%` }}></div></div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Shot Location Telemetry Tracking Matrix */}
+                    {/* Shot Location Advanced Attribute Tracker Array */}
                     <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-4">
-                      <h3 className="text-xs text-slate-400 font-black tracking-wider uppercase mb-3 flex items-center gap-2"><Users /> Shot Location Analytics</h3>
-                      <div className="space-y-3">
+                      <h3 className="text-xs text-slate-400 font-black tracking-wider uppercase mb-2.5 flex items-center gap-1.5"><Users /> Shot Location Analytics</h3>
+                      <div className="space-y-2">
                         <div>
-                          <div className="flex justify-between font-mono text-[11px] mb-0.5">
+                          <div className="flex justify-between font-mono text-[10px] mb-0.5">
                             <span className="text-purple-400 font-bold">Layups / Paint Looks</span>
                             <span>{gameStats.layupMakes}/{gameStats.layupTotal} ({calcPct(gameStats.layupMakes, gameStats.layupTotal)}%)</span>
                           </div>
-                          <div className="w-full bg-slate-950 h-2 rounded-full p-0.5"><div className="bg-purple-400 h-1 rounded-full transition-all" style={{ width: `${calcPct(gameStats.layupMakes, gameStats.layupTotal)}%` }}></div></div>
+                          <div className="w-full bg-slate-950 h-1.5 rounded-full"><div className="bg-purple-400 h-1.5 rounded-full transition-all" style={{ width: `${calcPct(gameStats.layupMakes, gameStats.layupTotal)}%` }}></div></div>
                         </div>
                         <div>
-                          <div className="flex justify-between font-mono text-[11px] mb-0.5">
+                          <div className="flex justify-between font-mono text-[10px] mb-0.5">
                             <span className="text-amber-400 font-bold">Mid-Range Jumpshots</span>
                             <span>{gameStats.middyMakes}/{gameStats.middyTotal} ({calcPct(gameStats.middyMakes, gameStats.middyTotal)}%)</span>
                           </div>
-                          <div className="w-full bg-slate-950 h-2 rounded-full p-0.5"><div className="bg-amber-400 h-1 rounded-full transition-all" style={{ width: `${calcPct(gameStats.middyMakes, gameStats.middyTotal)}%` }}></div></div>
+                          <div className="w-full bg-slate-950 h-1.5 rounded-full"><div className="bg-amber-400 h-1.5 rounded-full transition-all" style={{ width: `${calcPct(gameStats.middyMakes, gameStats.middyTotal)}%` }}></div></div>
                         </div>
                         <div>
-                          <div className="flex justify-between font-mono text-[11px] mb-0.5">
+                          <div className="flex justify-between font-mono text-[10px] mb-0.5">
                             <span className="text-indigo-400 font-bold">Perimeter 3-Pointers</span>
                             <span>{gameStats.threeMakes}/{gameStats.threeTotal} ({calcPct(gameStats.threeMakes, gameStats.threeTotal)}%)</span>
                           </div>
-                          <div className="w-full bg-slate-950 h-2 rounded-full p-0.5"><div className="bg-indigo-400 h-1 rounded-full transition-all" style={{ width: `${calcPct(gameStats.threeMakes, gameStats.threeTotal)}%` }}></div></div>
+                          <div className="w-full bg-slate-950 h-1.5 rounded-full"><div className="bg-indigo-400 h-1.5 rounded-full transition-all" style={{ width: `${calcPct(gameStats.threeMakes, gameStats.threeTotal)}%` }}></div></div>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* LIVE REAL-TIME NOTES STREAM MODULE */}
-                  <div className="bg-slate-900/30 border border-slate-800 rounded-2xl p-5">
-                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-2.5 flex items-center gap-2">
-                      📋 Real-Time Possession Feedback Logs
+                  {/* ACTIVE LIVE LINEUP DEPLOYMENT SUB-PANEL (Substitution Control Suite) */}
+                  <div className="bg-slate-900/30 border border-slate-800 rounded-xl p-4">
+                    <h3 className="text-xs font-black text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-2">
+                      🔄 Live Lineup Control & Sub Panel
                     </h3>
-                    <div className="bg-slate-950 border border-slate-900 rounded-xl p-3 max-h-[110px] overflow-y-auto space-y-2 font-mono text-xs text-slate-400">
-                      {gameStats.liveTacticalNotes.map((note, idx) => (
-                        <div key={idx} className="border-l-2 border-orange-500 pl-2 py-0.5 bg-slate-900/40 rounded-r">
-                          {note}
-                        </div>
+                    <p className="text-[11px] text-slate-400 mb-2.5">Manage player rotations dynamically. Toggling a bench player automatically places them into active floor matrices.</p>
+                    <div className="flex flex-wrap gap-2 max-h-[110px] overflow-y-auto">
+                      {fullRoster.map((player) => (
+                        <button
+                          key={player.id}
+                          onClick={() => handleSubstitution(player.id)}
+                          className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 border transition-all ${
+                            player.active 
+                              ? 'bg-orange-500/10 border-orange-500 text-orange-400' 
+                              : 'bg-slate-950 border-slate-800 text-slate-500 hover:text-slate-400'
+                          }`}
+                        >
+                          <span className="font-mono text-[10px]">#{player.number}</span>
+                          <span className="max-w-[80px] truncate">{player.name}</span>
+                          <span className="text-[8px] uppercase tracking-tighter opacity-50">({player.active ? 'On Court' : 'Bench'})</span>
+                        </button>
                       ))}
                     </div>
                   </div>
 
-                  {/* SYSTEM-GENERATED EXECUTIVE BRIEFING REPORT */}
-                  <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 relative shadow-xl">
-                    <div className="absolute top-0 right-0 bg-orange-500/10 text-orange-400 border-b border-l border-slate-800 px-3 py-1 font-mono text-[10px] uppercase font-black tracking-wider">
-                      Automated System Synthesis
+                  {/* REAL-TIME COMPLETED RUN FEEDBACK LOG TERMINAL */}
+                  <div className="bg-slate-900/30 border border-slate-800 rounded-xl p-4">
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                      📋 Live Sequence Outcome Log
+                    </h3>
+                    <div className="bg-slate-950 border border-slate-900 rounded-xl p-3 max-h-[95px] overflow-y-auto space-y-1.5 font-mono text-[11px] text-slate-400">
+                      {gameStats.liveTacticalNotes.length === 0 ? (
+                        <div className="text-slate-600 italic">No historical loops recorded yet. Commit a possession outcome to view real-time log data here.</div>
+                      ) : (
+                        gameStats.liveTacticalNotes.map((note, idx) => (
+                          <div key={idx} className="border-l-2 border-orange-500 pl-2 py-0.5 bg-slate-900/40 rounded-r">
+                            {note}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* REPLACEMENT COMPONENT: LIVE TOUCH ECONOMY VOLUME PER FIVE POSSESSIONS */}
+                  <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl relative flex-1">
+                    <h3 className="text-sm font-black text-slate-200 mb-3 flex items-center gap-2 uppercase tracking-wide">
+                      <Clipboard /> Inclusivity Index: Touches Per 5 Possessions
+                    </h3>
+                    <p className="text-xs text-slate-400 mb-4 leading-normal">
+                      Measures player inclusion over standard 5-possession game segments. Exposes active ball handlers vs. isolated baseline ghosts. Updates automatically when sequence terminations are logged.
+                    </p>
+
+                    <div className="bg-slate-950 border border-slate-800/80 rounded-xl p-3 divide-y divide-slate-900">
+                      {/* Render only active floor nodes to give instant baseline indicators */}
+                      {activeOnCourtPlayers.map((player) => {
+                        const touchesPerFive = getTouchesPerFivePossessions(player.id);
+                        const cumulativeTouches = gameStats.playerTotalTouches[player.id] || 0;
+                        return (
+                          <div key={player.id} className="py-2.5 flex items-center justify-between text-xs font-mono">
+                            <div className="flex items-center gap-3">
+                              <span className="text-orange-400 font-bold w-6">#{player.number}</span>
+                              <span className="text-slate-200 font-bold font-sans text-sm">{player.name}</span>
+                              <span className="text-[10px] text-slate-500 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded uppercase font-bold">{player.role}</span>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-slate-100 font-black text-sm">{touchesPerFive} <span className="text-[10px] text-slate-400 font-normal">Touches / 5 Poss</span></div>
+                              <div className="text-[10px] text-slate-600">Total: {cumulativeTouches} Touches</div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                     
-                    <h3 className="text-base font-bold text-slate-200 mb-4 flex items-center gap-2">
-                      <ShieldAlert /> Coach's Post-Game Briefing & Strategy Blueprint
-                    </h3>
-
-                    <div className="space-y-4 text-xs md:text-sm text-slate-300">
-                      {/* Sub-block 1 */}
-                      <div>
-                        <h4 className="font-bold border-b border-slate-800 pb-1 mb-2 text-xs uppercase tracking-wider text-orange-400">
-                          1. Core Telemetry Diagnostic Insights
-                        </h4>
-                        <ul className="list-disc pl-4 space-y-1">
-                          <li><strong>System-Wide Friction Metrics:</strong> {system === 'motion' ? "Roster ball-movement vectors show healthy metrics, but shot tracking exposes perimeter inefficiencies if ball transitions extend deep into late-clock environments." : "Star-dominated over-holding isolation phases are generating measurable execution traps. Role player catch-and-shoot targets drop significantly when spacing assets freeze outside the active sequence loop."}</li>
-                          <li><strong>The Stagnant Holding Tax:</strong> Total turnovers sitting at <span className="font-bold text-slate-100 font-mono">{gameStats.turnovers}</span> allocations. {gameStats.dribbleTaxDropoff}</li>
-                        </ul>
-                      </div>
-
-                      {/* Sub-block 2 */}
-                      <div>
-                        <h4 className="font-bold border-b border-slate-800 pb-1 mb-2 text-xs uppercase tracking-wider text-orange-400">
-                          2. Actionable Practice Blueprint Takeaways
-                        </h4>
-                        <div className="bg-slate-950 rounded-xl p-3 border border-slate-800 font-mono text-xs text-slate-400 space-y-1.5">
-                          <div>
-                            <span className="text-amber-400 font-bold">📢 Main Point to Emphasize:</span> "Our offense generates its highest point yields inside the Flow Phase ({calcPct(gameStats.flowZoneMakes, gameStats.flowZoneTotal)}%). Stagnation destroys conversion efficiency. Move the ball decisively on the initial catch."
-                          </div>
-                          <div>
-                            <span className="text-sky-400 font-bold">🏀 Recommended Practice Focus:</span> Run targeted 14-second situational scrimmage drills starting instantly past half-court. Immediately switch to fallback options if paint look spacing isn't opened within 4 seconds of possession initialization.
-                          </div>
-                        </div>
-                      </div>
+                    <div className="mt-4 flex items-center justify-between text-[11px] font-mono text-slate-500 bg-slate-950/60 p-2 rounded-lg border border-slate-900">
+                      <span>Global Run Count: {gameStats.totalPossessions}</span>
+                      <span>Ball Movement Volume Index: {gameStats.avgSecondsPerTouch} Touches/Poss</span>
                     </div>
                   </div>
 
