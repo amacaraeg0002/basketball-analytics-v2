@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Touch Economy Analytics Board</title>
+    <title>The Touch Economy Analytics Platform</title>
+    <!-- Tailwind CSS for Styling -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- React and Babel via CDN to run directly in browser without building -->
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -18,42 +20,62 @@
 
         // Simplified SVG Icon Components
         const ShieldAlert = () => (
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500"><path d="M20 13c0 5-3.5 7.5-7.66 9.7a1 1 0 0 1-.68 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 .76-.97l8-2a1 1 0 0 1 .48 0l8 2A1 1 0 0 1 20 6z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
-        );
-        const Zap = () => (
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-orange-500"><path d="M20 13c0 5-3.5 7.5-7.66 9.7a1 1 0 0 1-.68 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 .76-.97l8-2a1 1 0 0 1 .48 0l8 2A1 1 0 0 1 20 6z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
         );
         const Activity = () => (
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         );
         const TrendingUp = () => (
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-sky-400"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-sky-400"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+        );
+        const Users = () => (
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-400"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         );
 
         function App() {
+          // View State: 'setup' or 'dashboard'
+          const [view, setView] = useState('setup');
+          
+          // Setup Configuration State
+          const [gameTitle, setGameTitle] = useState('JUCO Scrimmage Baseline');
           const [system, setSystem] = useState('motion');
+          const [fullRoster, setFullRoster] = useState([
+            { id: 1, number: '1', name: 'Macaraeg', role: 'PG', active: true },
+            { id: 2, number: '2', name: 'Star Player', role: 'SG', active: true },
+            { id: 3, number: '3', name: 'Wing Out', role: 'SF', active: true },
+            { id: 4, number: '4', name: 'Stretch Big', role: 'PF', active: true },
+            { id: 5, number: '5', name: 'Center Anchor', role: 'C', active: true },
+            { id: 6, number: '11', name: 'Bench Guard', role: 'G', active: false },
+            { id: 7, number: '23', name: 'Bench Forward', role: 'F', active: false }
+          ]);
+
+          // Live Tracking Possession State
           const [currentPossessionTime, setCurrentPossessionTime] = useState(0);
           const [isTimerRunning, setIsTimerRunning] = useState(false);
           const [activePlayer, setActivePlayer] = useState(null);
           const [currentSequence, setCurrentSequence] = useState([]);
+          const [selectedLocation, setSelectedLocation] = useState('LAYUP');
+          
+          // Running Session Game Statistics
           const [gameStats, setGameStats] = useState({
-            totalPossessions: 42,
-            avgSecondsPerTouch: 1.9,
-            flowZoneMakes: 12, flowZoneTotal: 20,
-            execZoneMakes: 8, execZoneTotal: 15,
-            panicZoneMakes: 2, panicZoneTotal: 7,
-            ghostAlerts: ['#5 (C) - 5 straight ghost possessions in Q3'],
-            dribbleTaxDropoff: 'Spot-up efficiency drops from 44% to 19% when ball is held > 5 seconds.'
+            totalPossessions: 14,
+            avgSecondsPerTouch: 2.1,
+            // Shots Breakdown Matrix
+            layupMakes: 4, layupTotal: 6,
+            middyMakes: 2, middyTotal: 5,
+            threeMakes: 1, threeTotal: 3,
+            // Phase Breakdown
+            flowZoneMakes: 5, flowZoneTotal: 7,
+            execZoneMakes: 2, execZoneTotal: 5,
+            panicZoneMakes: 0, panicZoneTotal: 2,
+            turnovers: 2,
+            liveTacticalNotes: [
+              "💡 Possession #4 Note: System velocity remains elite when ball crosses half-court inside 3 seconds.",
+              "💡 Possession #9 Note: High-friction holding patterns emerging during isolations."
+            ]
           });
 
-          const players = [
-            { id: 1, role: 'PG', name: '#1 Base', x: '50%', y: '75%' },
-            { id: 2, role: 'SG', name: '#2 Star', x: '25%', y: '50%' },
-            { id: 3, role: 'SF', name: '#3 Wing', x: '75%', y: '50%' },
-            { id: 4, role: 'PF', name: '#4 Stretch', x: '35%', y: '25%' },
-            { id: 5, role: 'C', name: '#5 Big', x: '50%', y: '15%' },
-          ];
-
+          // Timer Execution Loop
           useEffect(() => {
             let interval;
             if (isTimerRunning) {
@@ -64,19 +86,92 @@
             return () => clearInterval(interval);
           }, [isTimerRunning]);
 
-          const handlePlayerTouch = (player) => {
+          // Handle Custom Roster Updates in Setup View
+          const handleRosterNameChange = (id, newName) => {
+            setFullRoster(prev => prev.map(p => p.id === id ? { ...p, name: newName } : p));
+          };
+
+          // Toggle Active Status (Who is on the floor right now)
+          const toggleOnCourt = (id) => {
+            const activeCount = fullRoster.filter(p => p.active).length;
+            setFullRoster(prev => prev.map(p => {
+              if (p.id === id) {
+                if (!p.active && activeCount >= 5) {
+                  alert("Maximum of 5 players allowed on the court at once!");
+                  return p;
+                }
+                return { ...p, active: !p.active };
+              }
+              return p;
+            }));
+          };
+
+          const activeOnCourtPlayers = fullRoster.filter(p => p.active);
+
+          // Spatial map coordinate assignments for active court players
+          const courtCoordinates = [
+            { x: '50%', y: '78%' }, // Spot 1
+            { x: '22%', y: '55%' }, // Spot 2
+            { x: '78%', y: '55%' }, // Spot 3
+            { x: '35%', y: '30%' }, // Spot 4
+            { x: '50%', y: '18%' }  // Spot 5
+          ];
+
+          const handlePlayerTouch = (player, index) => {
             if (!isTimerRunning) setIsTimerRunning(true);
             setActivePlayer(player.id);
-            setCurrentSequence((prev) => [...prev, { player: player.role, timeStamp: currentPossessionTime }]);
+            
+            // Logic to calculate dynamic hold metrics
+            const currentTouchesCount = currentSequence.filter(s => s.playerId === player.id).length;
+            setCurrentSequence((prev) => [
+              ...prev, 
+              { 
+                role: player.role, 
+                name: player.name, 
+                playerId: player.id, 
+                timeStamp: currentPossessionTime,
+                isInitial: prev.length === 0
+              }
+            ]);
           };
 
           const handleEndPossession = (outcome) => {
             setIsTimerRunning(false);
             if (currentSequence.length === 0) return;
+
             const finalTime = currentPossessionTime;
-            
+            const firstTouch = currentSequence[0];
+            const lastTouch = currentSequence[currentSequence.length - 1];
+
+            // Real-Time Note Generation Engine: Scans logs to drop adaptive coaching remarks automatically
+            let newLiveNote = null;
+            if (finalTime >= 12 && outcome === 'MISS') {
+              newLiveNote = `⏳ Warning: Possession ended late (${finalTime}s) on a missed ${selectedLocation.toLowerCase()} by ${lastTouch.name}. Attack stagnated.`;
+            } else if (firstTouch && finalTime <= 6 && outcome === 'MAKE') {
+              newLiveNote = `⚡ Flash Execution: ${firstTouch.name} initialized an early transition attack resulting in a converted ${selectedLocation.toLowerCase()}.`;
+            } else if (currentSequence.length >= 4 && outcome === 'MAKE') {
+              newLiveNote = `🎯 Ball Flow Reward: High inclusivity string (${currentSequence.length} touches) yielded an open made ${selectedLocation.toLowerCase()}.`;
+            } else if (outcome === 'TURNOVER') {
+              newLiveNote = `⚠️ Possession Turnover registered at the ${finalTime}s mark following ball containment sequence.`;
+            }
+
             setGameStats((prev) => {
               const updated = { ...prev, totalPossessions: prev.totalPossessions + 1 };
+              
+              // Handle Shot Location Breakdown Tracking
+              if (outcome === 'MAKE') {
+                if (selectedLocation === 'LAYUP') { updated.layupMakes += 1; updated.layupTotal += 1; }
+                if (selectedLocation === 'MIDDY') { updated.middyMakes += 1; updated.middyTotal += 1; }
+                if (selectedLocation === '3PT') { updated.threeMakes += 1; updated.threeTotal += 1; }
+              } else if (outcome === 'MISS') {
+                if (selectedLocation === 'LAYUP') updated.layupTotal += 1;
+                if (selectedLocation === 'MIDDY') updated.middyTotal += 1;
+                if (selectedLocation === '3PT') updated.threeTotal += 1;
+              } else if (outcome === 'TURNOVER') {
+                updated.turnovers += 1;
+              }
+
+              // Handle Half-Court Time Phase Accumulation
               if (finalTime <= 6) {
                 updated.flowZoneTotal += 1;
                 if (outcome === 'MAKE') updated.flowZoneMakes += 1;
@@ -87,9 +182,16 @@
                 updated.panicZoneTotal += 1;
                 if (outcome === 'MAKE') updated.panicZoneMakes += 1;
               }
+
+              // Append Live Reactive Note if generated
+              if (newLiveNote) {
+                updated.liveTacticalNotes = [newLiveNote, ...prev.liveTacticalNotes];
+              }
+
               return updated;
             });
 
+            // Reset execution state
             setCurrentPossessionTime(0);
             setActivePlayer(null);
             setCurrentSequence([]);
@@ -97,104 +199,328 @@
 
           const calcPct = (makes, total) => (total > 0 ? ((makes / total) * 100).toFixed(1) : 0);
 
+          // VIEW 1: GAME CONFIGURATION & PRE-GAME SETUP MENU
+          if (view === 'setup') {
+            return (
+              <div className="min-h-screen bg-slate-950 text-slate-100 p-6 md:p-12 flex items-center justify-center">
+                <div className="max-w-2xl w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl">
+                  <div className="text-center mb-8">
+                    <span className="bg-orange-500/10 text-orange-400 font-mono text-xs px-3 py-1 rounded-full border border-orange-500/20 font-bold uppercase tracking-widest">Setup Configuration Module</span>
+                    <h1 className="text-3xl font-black mt-3 bg-gradient-to-r from-orange-500 to-amber-400 bg-clip-text text-transparent">START NEW TRACKING SESSION</h1>
+                    <p className="text-sm text-slate-400 mt-1">Initialize game parameters and assign active on-court roster nodes.</p>
+                  </div>
+
+                  <div className="space-y-6">
+                    {/* Game Title Metadata Input */}
+                    <div>
+                      <label className="block text-xs uppercase font-black tracking-wider text-slate-400 mb-2">Game Designation Title</label>
+                      <input 
+                        type="text" 
+                        value={gameTitle} 
+                        onChange={(e) => setGameTitle(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-orange-500 text-slate-200"
+                      />
+                    </div>
+
+                    {/* Offensive System Preset Selector */}
+                    <div>
+                      <label className="block text-xs uppercase font-black tracking-wider text-slate-400 mb-2">Offensive System Benchmark Architecture</label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <button onClick={() => setSystem('motion')} className={`p-4 rounded-xl border text-left font-bold transition-all ${system === 'motion' ? 'bg-slate-950 border-orange-500 text-orange-400 shadow-md' : 'bg-slate-950/40 border-slate-800 text-slate-400'}`}>
+                          <div className="text-sm">Motion / Share System</div>
+                          <div className="text-[10px] font-normal mt-1 opacity-60">Benchmarks tracking for quick ball velocity and touch distribution profiles.</div>
+                        </button>
+                        <button onClick={() => setSystem('isolation')} className={`p-4 rounded-xl border text-left font-bold transition-all ${system === 'isolation' ? 'bg-slate-950 border-orange-500 text-orange-400 shadow-md' : 'bg-slate-950/40 border-slate-800 text-slate-400'}`}>
+                          <div className="text-sm">Star-Heavy / Isolation</div>
+                          <div className="text-[10px] font-normal mt-1 opacity-60">Adjusts metrics to look at catch-and-shoot cold thresholds and dribble stagnation.</div>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Roster Assignment Sub-panel */}
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <label className="block text-xs uppercase font-black tracking-wider text-slate-400">Team Roster Setup (Select Exactly 5 On-Court)</label>
+                        <span className="text-xs font-mono text-orange-400 font-bold">{fullRoster.filter(p=>p.active).length} / 5 Selected</span>
+                      </div>
+                      
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden divide-y divide-slate-900">
+                        {fullRoster.map((player) => (
+                          <div key={player.id} className="p-3 flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-3 flex-1">
+                              <span className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center font-mono text-xs text-slate-400 font-bold">#{player.number}</span>
+                              <input 
+                                type="text" 
+                                value={player.name}
+                                onChange={(e) => handleRosterNameChange(player.id, e.target.value)}
+                                className="bg-transparent border-b border-transparent hover:border-slate-800 focus:border-orange-500 focus:outline-none text-sm font-bold text-slate-200 py-0.5 px-1 flex-1"
+                              />
+                              <span className="text-[10px] bg-slate-900 border border-slate-800 text-slate-500 px-2 py-0.5 rounded uppercase font-bold">{player.role}</span>
+                            </div>
+                            <button 
+                              onClick={() => toggleOnCourt(player.id)}
+                              className={`px-3 py-1 rounded-lg text-xs font-black uppercase transition-all ${player.active ? 'bg-orange-500/10 text-orange-400 border border-orange-500/30' : 'bg-slate-900 border border-slate-800 text-slate-500'}`}
+                            >
+                              {player.active ? 'On Floor' : 'Bench'}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Setup Authorization Execution Launch Button */}
+                    <button 
+                      onClick={() => {
+                        if (fullRoster.filter(p=>p.active).length !== 5) {
+                          alert("You must select exactly 5 active players for the court tracking positions before continuing!");
+                          return;
+                        }
+                        setView('dashboard');
+                      }}
+                      className="w-full bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white font-black py-3 rounded-xl uppercase text-sm tracking-wider transition-all shadow-xl mt-4"
+                    >
+                      Initialize Analytics Board ➔
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          // VIEW 2: ACTIVE ANALYTICS DASHBOARD ENGINE
           return (
-            <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8">
+            <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-4 md:p-8">
+              {/* Header Navigation Area */}
               <header className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center border-b border-slate-800 pb-6 mb-8 gap-4">
                 <div>
-                  <h1 className="text-2xl md:text-3xl font-black bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-300 bg-clip-text text-transparent">
-                    THE TOUCH ECONOMY
-                  </h1>
-                  <p className="text-xs md:text-sm text-slate-400 mt-1">Post-Game Film Translation Board • Tactical Strategy Prototype</p>
+                  <div className="flex items-center gap-3">
+                    <h1 className="text-2xl md:text-3xl font-black bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-300 bg-clip-text text-transparent">THE TOUCH ECONOMY</h1>
+                    <span className="text-xs bg-slate-900 border border-slate-800 text-slate-400 px-2 py-0.5 rounded-md font-bold mt-1 uppercase tracking-tight">{gameTitle}</span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">Telemetry Dashboard Engine • Automated Live-Rule Contextual Diagnostics</p>
                 </div>
-                <div className="bg-slate-900 border border-slate-800 p-1.5 rounded-xl flex gap-2">
-                  <button onClick={() => setSystem('motion')} className={`px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition-all ${system === 'motion' ? 'bg-orange-500 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}>Motion / Share System</button>
-                  <button onClick={() => setSystem('isolation')} className={`px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition-all ${system === 'isolation' ? 'bg-orange-500 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}>Star-Heavy / Isolation</button>
+                
+                <div className="flex items-center gap-4">
+                  <button onClick={() => setView('setup')} className="text-xs bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 px-3 py-2 rounded-xl font-bold transition-all">
+                    ⚙️ Return to Setup Menu
+                  </button>
+                  <div className="bg-slate-900 border border-slate-800 p-1 rounded-xl text-xs font-mono font-bold text-orange-400 px-3 py-2">
+                    System Mode: {system === 'motion' ? 'Motion / Share' : 'Star Isolation'}
+                  </div>
                 </div>
               </header>
 
+              {/* Main Workspace Layout Frame */}
               <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+                
+                {/* Left Panel: Tracker Court Input Interface */}
                 <section className="lg:col-span-5 bg-slate-900/50 border border-slate-800 rounded-2xl p-6 flex flex-col backdrop-blur-sm">
-                  <div className="mb-4">
-                    <h2 className="text-lg font-bold flex items-center gap-2 text-slate-200"><Activity /> Live Film Tracker Input Module</h2>
-                    <p className="text-xs text-slate-400">Click a position when they capture the ball past half-court.</p>
-                  </div>
-
-                  <div className="relative w-full aspect-[4/3] bg-slate-950 border-2 border-slate-800 rounded-xl overflow-hidden flex items-center justify-center shadow-inner">
-                    {players.map((player) => (
-                      <button key={player.id} onClick={() => handlePlayerTouch(player)} style={{ left: player.x, top: player.y }} className={`absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center w-14 h-14 rounded-full font-black text-xs border-2 transition-all duration-150 active:scale-95 ${activePlayer === player.id ? 'bg-amber-500 border-white text-slate-950 ring-4 ring-amber-500/30' : 'bg-slate-900 border-slate-700 text-slate-200 hover:border-orange-500'}`}>
-                        <span>{player.role}</span>
-                      </button>
-                    ))}
-                    <div className="absolute top-4 right-4 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg font-mono text-xs text-orange-400">Half-Court Clock: {currentPossessionTime}s</div>
-                  </div>
-
-                  <div className="mt-4 bg-slate-950 border border-slate-800 rounded-xl p-3 min-h-[60px]">
-                    <div className="text-[11px] text-slate-400 uppercase tracking-wider font-bold mb-1">Active Sequence:</div>
-                    <div className="flex flex-wrap gap-1.5 text-xs">
-                      {currentSequence.length === 0 ? <span className="text-slate-600 italic">Click positions to track...</span> : currentSequence.map((seq, i) => <span key={i} className="bg-slate-900 border border-slate-800 px-2 py-1 rounded text-slate-300 font-mono">{seq.player} ({seq.timeStamp}s)</span>)}
+                  <div className="mb-4 flex justify-between items-start">
+                    <div>
+                      <h2 className="text-base font-bold flex items-center gap-2 text-slate-200"><Activity /> Tactical Half-Court Telemetry</h2>
+                      <p className="text-xs text-slate-400">Tap court nodes as ball transactions occur in real-time.</p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3 mt-4">
-                    <button onClick={() => handleEndPossession('MAKE')} className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs uppercase tracking-wider">Make</button>
-                    <button onClick={() => handleEndPossession('MISS')} className="bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 rounded-xl text-xs uppercase tracking-wider">Miss</button>
-                    <button onClick={() => handleEndPossession('TURNOVER')} className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2 rounded-xl text-xs uppercase tracking-wider border border-slate-700">Turnover</button>
+                  {/* Half-Court Node Map Shell */}
+                  <div className="relative w-full aspect-[4/3] bg-slate-950 border-2 border-slate-800 rounded-xl overflow-hidden shadow-inner mb-4">
+                    {/* Court Marking Vector Lines */}
+                    <div className="absolute top-0 w-full h-full border-b border-slate-800/20 pointer-events-none"></div>
+                    <div className="absolute top-0 w-36 h-28 border-2 border-slate-800/40 rounded-b-xl left-1/2 transform -translate-x-1/2 pointer-events-none"></div>
+                    <div className="absolute top-0 w-72 h-56 border-2 border-slate-800/20 rounded-b-full left-1/2 transform -translate-x-1/2 pointer-events-none"></div>
+
+                    {/* Active Court Mapping Position Nodes */}
+                    {activeOnCourtPlayers.map((player, index) => {
+                      const coords = courtCoordinates[index] || { x: '50%', y: '50%' };
+                      return (
+                        <button
+                          key={player.id}
+                          onClick={() => handlePlayerTouch(player, index)}
+                          style={{ left: coords.x, top: coords.y }}
+                          className={`absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center w-16 h-16 rounded-full font-black text-xs border-2 transition-all duration-150 active:scale-95 shadow-lg ${
+                            activePlayer === player.id 
+                              ? 'bg-gradient-to-br from-orange-500 to-amber-500 border-white text-slate-950 ring-4 ring-orange-500/30' 
+                              : 'bg-slate-900 border-slate-700 text-slate-200 hover:border-orange-500 hover:text-orange-400'
+                          }`}
+                        >
+                          <span className="text-[10px] font-mono tracking-tight text-slate-400 leading-none mb-0.5">#{player.number}</span>
+                          <span className="truncate max-w-[56px] text-[11px] font-black">{player.name}</span>
+                          <span className="text-[8px] font-bold opacity-50 leading-none mt-0.5 uppercase">{player.role}</span>
+                        </button>
+                      );
+                    })}
+
+                    {/* Real-Time Run Stopwatch Telemetry overlay */}
+                    <div className="absolute top-4 right-4 bg-slate-950/90 border border-slate-800 px-3 py-1.5 rounded-lg font-mono text-xs text-orange-400 flex items-center gap-1.5">
+                      <span className={`w-2 h-2 rounded-full bg-orange-500 ${isTimerRunning ? 'animate-ping' : ''}`}></span>
+                      Half-Court Clock: {currentPossessionTime}s
+                    </div>
+                  </div>
+
+                  {/* Active Sequence Log Display Terminal */}
+                  <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 min-h-[60px] mb-4">
+                    <div className="text-[10px] text-slate-500 uppercase font-black tracking-wider mb-1">Active Run Sequence Trail:</div>
+                    <div className="flex flex-wrap gap-1 text-xs items-center">
+                      {currentSequence.length === 0 ? (
+                        <span className="text-slate-600 italic text-xs">Awaiting half-court entry trigger trigger...</span>
+                      ) : (
+                        currentSequence.map((seq, i) => (
+                          <span key={i} className="flex items-center gap-1">
+                            <span className="bg-slate-900 border border-slate-800 text-slate-300 px-2 py-0.5 rounded font-mono text-[11px]">
+                              {seq.name} ({seq.timeStamp}s)
+                            </span>
+                            {i < currentSequence.length - 1 && <span className="text-slate-700 text-[10px]">➔</span>}
+                          </span>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Shot Location Advanced Attribute Selectors */}
+                  <div className="mb-4">
+                    <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1.5">Set Outcome Target Location Attribute</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {['LAYUP', 'MIDDY', '3PT'].map((loc) => (
+                        <button
+                          key={loc}
+                          onClick={() => setSelectedLocation(loc)}
+                          className={`py-1.5 rounded-lg text-xs font-black tracking-wide border transition-all ${selectedLocation === loc ? 'bg-orange-500/10 border-orange-500 text-orange-400' : 'bg-slate-950 border-slate-800 text-slate-500'}`}
+                        >
+                          {loc}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Final Operational Run Termination Controls */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <button onClick={() => handleEndPossession('MAKE')} className="bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md">
+                      Hit Make
+                    </button>
+                    <button onClick={() => handleEndPossession('MISS')} className="bg-rose-600 hover:bg-rose-500 text-white font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md">
+                      Hit Miss
+                    </button>
+                    <button onClick={() => handleEndPossession('TURNOVER')} className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all border border-slate-700">
+                      Turnover
+                    </button>
                   </div>
                 </section>
 
+                {/* Right Panel: Data Metrics and Strategy Summary Reporting */}
                 <section className="lg:col-span-7 flex flex-col gap-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="bg-slate-900/40 border border-slate-800 p-4 rounded-xl">
-                      <span className="text-xs text-slate-400 font-bold block mb-1">BALL VELOCITY INDEX</span>
-                      <div className="text-2xl font-black text-emerald-400">{gameStats.avgSecondsPerTouch}s</div>
+                  
+                  {/* Aggregated Statistical Matrix Gauges */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Time Phase Split Panel */}
+                    <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-4">
+                      <h3 className="text-xs text-slate-400 font-black tracking-wider uppercase mb-3 flex items-center gap-2"><TrendingUp /> Time-Zone Efficiency Profiles</h3>
+                      <div className="space-y-3">
+                        <div>
+                          <div className="flex justify-between font-mono text-[11px] mb-0.5">
+                            <span className="text-emerald-400 font-bold">Flow Phase (0-6s)</span>
+                            <span>{gameStats.flowZoneMakes}/{gameStats.flowZoneTotal} ({calcPct(gameStats.flowZoneMakes, gameStats.flowZoneTotal)}%)</span>
+                          </div>
+                          <div className="w-full bg-slate-950 h-2 rounded-full p-0.5"><div className="bg-emerald-400 h-1 rounded-full transition-all" style={{ width: `${calcPct(gameStats.flowZoneMakes, gameStats.flowZoneTotal)}%` }}></div></div>
+                        </div>
+                        <div>
+                          <div className="flex justify-between font-mono text-[11px] mb-0.5">
+                            <span className="text-sky-400 font-bold">Execution Phase (7-14s)</span>
+                            <span>{gameStats.execZoneMakes}/{gameStats.execZoneTotal} ({calcPct(gameStats.execZoneMakes, gameStats.execZoneTotal)}%)</span>
+                          </div>
+                          <div className="w-full bg-slate-950 h-2 rounded-full p-0.5"><div className="bg-sky-400 h-1 rounded-full transition-all" style={{ width: `${calcPct(gameStats.execZoneMakes, gameStats.execZoneTotal)}%` }}></div></div>
+                        </div>
+                        <div>
+                          <div className="flex justify-between font-mono text-[11px] mb-0.5">
+                            <span className="text-rose-500 font-bold">Panic Phase (15s+)</span>
+                            <span>{gameStats.panicZoneMakes}/{gameStats.panicZoneTotal} ({calcPct(gameStats.panicZoneMakes, gameStats.panicZoneTotal)}%)</span>
+                          </div>
+                          <div className="w-full bg-slate-950 h-2 rounded-full p-0.5"><div className="bg-rose-500 h-1 rounded-full transition-all" style={{ width: `${calcPct(gameStats.panicZoneMakes, gameStats.panicZoneTotal)}%` }}></div></div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="bg-slate-900/40 border border-slate-800 p-4 rounded-xl">
-                      <span className="text-xs text-slate-400 font-bold block mb-1">TOTAL LOGGED RUNS</span>
-                      <div className="text-2xl font-black text-sky-400">{gameStats.totalPossessions}</div>
-                    </div>
-                    <div className="bg-slate-900/40 border border-slate-800 p-4 rounded-xl">
-                      <span className="text-xs text-slate-400 font-bold block mb-1">GHOST ALERT STATUS</span>
-                      <div className="text-xs font-black text-amber-500 truncate mt-1">⚠️ Flagged: #5 Big (Q3)</div>
-                    </div>
-                  </div>
 
-                  <div className="bg-slate-900/30 border border-slate-800 rounded-2xl p-5">
-                    <h3 className="text-sm font-black text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-2"><TrendingUp /> Time-Based Shooting Matrix</h3>
-                    <div className="space-y-4">
-                      <div>
-                        <div className="flex justify-between text-xs font-mono mb-1"><span className="text-emerald-400 font-bold">Flow Zone (0-6s)</span><span>{calcPct(gameStats.flowZoneMakes, gameStats.flowZoneTotal)}% Efficiency</span></div>
-                        <div className="w-full bg-slate-950 h-2.5 rounded-full"><div className="bg-emerald-400 h-2.5 rounded-full" style={{ width: `${calcPct(gameStats.flowZoneMakes, gameStats.flowZoneTotal)}%` }}></div></div>
-                      </div>
-                      <div>
-                        <div className="flex justify-between text-xs font-mono mb-1"><span className="text-sky-400 font-bold">Execution Zone (7-14s)</span><span>{calcPct(gameStats.execZoneMakes, gameStats.execZoneTotal)}% Efficiency</span></div>
-                        <div className="w-full bg-slate-950 h-2.5 rounded-full"><div className="bg-sky-400 h-2.5 rounded-full" style={{ width: `${calcPct(gameStats.execZoneMakes, gameStats.execZoneTotal)}%` }}></div></div>
-                      </div>
-                      <div>
-                        <div className="flex justify-between text-xs font-mono mb-1"><span className="text-rose-500 font-bold">Panic Zone (15s+)</span><span>{calcPct(gameStats.panicZoneMakes, gameStats.panicZoneTotal)}% Efficiency</span></div>
-                        <div className="w-full bg-slate-950 h-2.5 rounded-full"><div className="bg-rose-500 h-2.5 rounded-full" style={{ width: `${calcPct(gameStats.panicZoneMakes, gameStats.panicZoneTotal)}%` }}></div></div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 relative">
-                    <h3 className="text-base font-bold text-slate-200 mb-4 flex items-center gap-2"><ShieldAlert /> Coach's Post-Game Briefing Report</h3>
-                    <div className="space-y-4 text-xs md:text-sm text-slate-300">
-                      <div>
-                        <h4 className="font-bold border-b border-slate-800 pb-1 mb-2 text-xs uppercase tracking-wider text-orange-400">1. Structural Diagnostic Insights</h4>
-                        <ul className="list-disc pl-4 space-y-1">
-                          <li><strong>System Engagement Breakdowns:</strong> {system === 'motion' ? "Roster velocity functions smoothly, but metrics indicate spatial holding flags when the ball fails to cross the key line early." : "Star-dominated over-holding phases are creating heavy systemic degradation. Catch-and-shoot metrics tank when players sit cold for 4+ runs."}</li>
-                          <li><strong>The Stagnant Dribble Tax:</strong> {gameStats.dribbleTaxDropoff}</li>
-                        </ul>
-                      </div>
-                      <div>
-                        <h4 className="font-bold border-b border-slate-800 pb-1 mb-2 text-xs uppercase tracking-wider text-orange-400">2. Practice Blueprint Adjustments</h4>
-                        <div className="bg-slate-950 rounded-xl p-3 border border-slate-800 font-mono text-xs text-slate-400 space-y-1">
-                          <div><span className="text-amber-400 font-bold">📢 Core Emphasis:</span> "Our metrics reveal an elite {calcPct(gameStats.flowZoneMakes, gameStats.flowZoneTotal)}% efficiency window in early Flow phases. Stagnation kills conversion. Keep the leather flying."</div>
-                          <div><span className="text-sky-400 font-bold">🏀 Drill Target:</span> Conduct half-court scrimmage blocks with strict 14-second parameter constraints to force immediate alternative read execution.</div>
+                    {/* Shot Location Telemetry Tracking Matrix */}
+                    <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-4">
+                      <h3 className="text-xs text-slate-400 font-black tracking-wider uppercase mb-3 flex items-center gap-2"><Users /> Shot Location Analytics</h3>
+                      <div className="space-y-3">
+                        <div>
+                          <div className="flex justify-between font-mono text-[11px] mb-0.5">
+                            <span className="text-purple-400 font-bold">Layups / Paint Looks</span>
+                            <span>{gameStats.layupMakes}/{gameStats.layupTotal} ({calcPct(gameStats.layupMakes, gameStats.layupTotal)}%)</span>
+                          </div>
+                          <div className="w-full bg-slate-950 h-2 rounded-full p-0.5"><div className="bg-purple-400 h-1 rounded-full transition-all" style={{ width: `${calcPct(gameStats.layupMakes, gameStats.layupTotal)}%` }}></div></div>
+                        </div>
+                        <div>
+                          <div className="flex justify-between font-mono text-[11px] mb-0.5">
+                            <span className="text-amber-400 font-bold">Mid-Range Jumpshots</span>
+                            <span>{gameStats.middyMakes}/{gameStats.middyTotal} ({calcPct(gameStats.middyMakes, gameStats.middyTotal)}%)</span>
+                          </div>
+                          <div className="w-full bg-slate-950 h-2 rounded-full p-0.5"><div className="bg-amber-400 h-1 rounded-full transition-all" style={{ width: `${calcPct(gameStats.middyMakes, gameStats.middyTotal)}%` }}></div></div>
+                        </div>
+                        <div>
+                          <div className="flex justify-between font-mono text-[11px] mb-0.5">
+                            <span className="text-indigo-400 font-bold">Perimeter 3-Pointers</span>
+                            <span>{gameStats.threeMakes}/{gameStats.threeTotal} ({calcPct(gameStats.threeMakes, gameStats.threeTotal)}%)</span>
+                          </div>
+                          <div className="w-full bg-slate-950 h-2 rounded-full p-0.5"><div className="bg-indigo-400 h-1 rounded-full transition-all" style={{ width: `${calcPct(gameStats.threeMakes, gameStats.threeTotal)}%` }}></div></div>
                         </div>
                       </div>
                     </div>
                   </div>
+
+                  {/* LIVE REAL-TIME NOTES STREAM MODULE */}
+                  <div className="bg-slate-900/30 border border-slate-800 rounded-2xl p-5">
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-2.5 flex items-center gap-2">
+                      📋 Real-Time Possession Feedback Logs
+                    </h3>
+                    <div className="bg-slate-950 border border-slate-900 rounded-xl p-3 max-h-[110px] overflow-y-auto space-y-2 font-mono text-xs text-slate-400">
+                      {gameStats.liveTacticalNotes.map((note, idx) => (
+                        <div key={idx} className="border-l-2 border-orange-500 pl-2 py-0.5 bg-slate-900/40 rounded-r">
+                          {note}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* SYSTEM-GENERATED EXECUTIVE BRIEFING REPORT */}
+                  <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 relative shadow-xl">
+                    <div className="absolute top-0 right-0 bg-orange-500/10 text-orange-400 border-b border-l border-slate-800 px-3 py-1 font-mono text-[10px] uppercase font-black tracking-wider">
+                      Automated System Synthesis
+                    </div>
+                    
+                    <h3 className="text-base font-bold text-slate-200 mb-4 flex items-center gap-2">
+                      <ShieldAlert /> Coach's Post-Game Briefing & Strategy Blueprint
+                    </h3>
+
+                    <div className="space-y-4 text-xs md:text-sm text-slate-300">
+                      {/* Sub-block 1 */}
+                      <div>
+                        <h4 className="font-bold border-b border-slate-800 pb-1 mb-2 text-xs uppercase tracking-wider text-orange-400">
+                          1. Core Telemetry Diagnostic Insights
+                        </h4>
+                        <ul className="list-disc pl-4 space-y-1">
+                          <li><strong>System-Wide Friction Metrics:</strong> {system === 'motion' ? "Roster ball-movement vectors show healthy metrics, but shot tracking exposes perimeter inefficiencies if ball transitions extend deep into late-clock environments." : "Star-dominated over-holding isolation phases are generating measurable execution traps. Role player catch-and-shoot targets drop significantly when spacing assets freeze outside the active sequence loop."}</li>
+                          <li><strong>The Stagnant Holding Tax:</strong> Total turnovers sitting at <span className="font-bold text-slate-100 font-mono">{gameStats.turnovers}</span> allocations. {gameStats.dribbleTaxDropoff}</li>
+                        </ul>
+                      </div>
+
+                      {/* Sub-block 2 */}
+                      <div>
+                        <h4 className="font-bold border-b border-slate-800 pb-1 mb-2 text-xs uppercase tracking-wider text-orange-400">
+                          2. Actionable Practice Blueprint Takeaways
+                        </h4>
+                        <div className="bg-slate-950 rounded-xl p-3 border border-slate-800 font-mono text-xs text-slate-400 space-y-1.5">
+                          <div>
+                            <span className="text-amber-400 font-bold">📢 Main Point to Emphasize:</span> "Our offense generates its highest point yields inside the Flow Phase ({calcPct(gameStats.flowZoneMakes, gameStats.flowZoneTotal)}%). Stagnation destroys conversion efficiency. Move the ball decisively on the initial catch."
+                          </div>
+                          <div>
+                            <span className="text-sky-400 font-bold">🏀 Recommended Practice Focus:</span> Run targeted 14-second situational scrimmage drills starting instantly past half-court. Immediately switch to fallback options if paint look spacing isn't opened within 4 seconds of possession initialization.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                 </section>
               </main>
             </div>
