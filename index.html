@@ -4,23 +4,81 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Touch Economy Analytics Platform</title>
-    <!-- Tailwind CSS for Styling -->
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <!-- React and Babel via CDN -->
+    
+    <!-- Firebase Compat SDKs (Provides stable global firebase namespace inside frames) -->
+    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
+
+    <!-- React and Babel Standalone -->
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        /* Custom scrollbar to match our premium dark theme */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #090d16;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #f97316;
+        }
+        .court-gradient {
+            background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+        }
+    </style>
 </head>
-<body class="bg-slate-950 text-slate-100">
+<body class="bg-[#030712] text-slate-100 min-h-screen selection:bg-orange-500/30 selection:text-orange-400">
 
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // SVG Icon Components
+        // --- FIREBASE ENVIRONMENT INTEGRATION (Strict Pathing & Auth Guards) ---
+        let firebaseConfig = {};
+        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+            try {
+                firebaseConfig = JSON.parse(__firebase_config);
+            } catch (e) {
+                console.error("Failed to parse __firebase_config", e);
+            }
+        } else {
+            // Safe fallback configuration
+            firebaseConfig = {
+                apiKey: "",
+                authDomain: "mock-project.firebaseapp.com",
+                projectId: "mock-project",
+                storageBucket: "mock-project.appspot.com",
+                messagingSenderId: "12345",
+                appId: "1:12345:web:12345"
+            };
+        }
+
+        // Initialize compat layer
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'touch-economy-v3';
+
+        // --- REUSABLE PREMIUM SVG ICONS ---
+        const ShieldCheck = () => (
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-500"><path d="M20 13c0 5-3.5 7.5-7.66 9.7a1 1 0 0 1-.68 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 .76-.97l8-2a1 1 0 0 1 .48 0l8 2A1 1 0 0 1 20 6z"/><path d="m9 12 2 2 4-4"/></svg>
+        );
         const Activity = () => (
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-orange-400"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         );
         const TrendingUp = () => (
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-sky-400"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
@@ -28,228 +86,199 @@
         const Users = () => (
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-400"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         );
-        const Clipboard = () => (
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+        const Database = () => (
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>
+        );
+        const Gamepad = () => (
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-pink-400"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4"/><path d="M8 10v4"/><line x1="15" y1="13" x2="15.01" y2="13"/><line x1="18" y1="11" x2="18.01" y2="11"/></svg>
         );
 
         function App() {
-          // View State: 'setup' or 'dashboard'
-          const [view, setView] = useState(() => {
-            const savedView = localStorage.getItem('te_view');
-            return savedView || 'setup';
-          });
+          // View state: 'setup', 'dashboard', or 'review' (to inspect past games)
+          const [view, setView] = useState('setup');
+          const [user, setUser] = useState(null);
           
-          // Setup Configuration State
-          const [gameTitle, setGameTitle] = useState(() => {
-            return localStorage.getItem('te_gameTitle') || 'High School Varsity Baseline';
-          });
+          // Custom Alert/Toast notifications
+          const [toast, setToast] = useState({ visible: false, message: "", type: "info" });
+          const showToast = (message, type = "info") => {
+            setToast({ visible: true, message, type });
+            setTimeout(() => setToast({ visible: false, message: "", type: "info" }), 4000);
+          };
+
+          // Auth / Portal inputs
+          const [authMode, setAuthMode] = useState('login'); // 'login' or 'signup'
+          const [loginType, setLoginType] = useState('username'); // 'username' or 'email'
+          const [usernameInput, setUsernameInput] = useState('');
+          const [emailInput, setEmailInput] = useState('');
+          const [passwordInput, setPasswordInput] = useState('');
+          const [authLoading, setAuthLoading] = useState(false);
+
+          // Setup inputs & presets
+          const [gameTitle, setGameTitle] = useState('');
+          const [system, setSystem] = useState('motion');
           
-          const [fullRoster, setFullRoster] = useState(() => {
-            const savedRoster = localStorage.getItem('te_fullRoster');
-            if (savedRoster) return JSON.parse(savedRoster);
-            return [
-              { id: 1, number: '1', name: 'Adrian', role: 'PG', active: true },
-              { id: 2, number: '2', name: 'Star Player', role: 'SG', active: true },
-              { id: 3, number: '3', name: 'Wing Out', role: 'SF', active: true },
-              { id: 4, number: '4', name: 'Stretch Big', role: 'PF', active: true },
-              { id: 5, number: '5', name: 'Center Anchor', role: 'C', active: true }
-            ];
-          });
+          // Full customizable roster (initial state is empty to prevent generic placeholder assumptions)
+          const [fullRoster, setFullRoster] = useState([
+            { id: 1, number: '', name: '', role: 'PG', active: true },
+            { id: 2, number: '', name: '', role: 'SG', active: true },
+            { id: 3, number: '', name: '', role: 'SF', active: true },
+            { id: 4, number: '', name: '', role: 'PF', active: true },
+            { id: 5, number: '', name: '', role: 'C', active: true }
+          ]);
 
-          // New player input states
-          const [newPlayerName, setNewPlayerName] = useState('');
-          const [newPlayerNumber, setNewPlayerNumber] = useState('');
-          const [newPlayerRole, setNewPlayerRole] = useState('G');
+          // New player modal inputs
+          const [tempName, setTempName] = useState('');
+          const [tempNumber, setTempNumber] = useState('');
+          const [tempRole, setTempRole] = useState('G');
 
-          // Live Tracking Possession State
+          // Cloud Vault Collections
+          const [savedRosters, setSavedRosters] = useState([]);
+          const [savedGames, setSavedGames] = useState([]);
+          const [selectedArchivedGame, setSelectedArchivedGame] = useState(null);
+
+          // Active Tracking State
           const [currentPossessionTime, setCurrentPossessionTime] = useState(0);
           const [isTimerRunning, setIsTimerRunning] = useState(false);
           const [activePlayer, setActivePlayer] = useState(null);
           const [currentSequence, setCurrentSequence] = useState([]);
           const [selectedLocation, setSelectedLocation] = useState('LAYUP');
-          
-          // Cleaned Session Statistics starting completely at 0/0
-          const [gameStats, setGameStats] = useState(() => {
-            const savedStats = localStorage.getItem('te_gameStats');
-            if (savedStats) return JSON.parse(savedStats);
-            return {
-              totalPossessions: 0,
-              avgSecondsPerTouch: 0,
-              totalTouchesAcrossGame: 0,
-              // Shots Breakdown Matrix
-              layupMakes: 0, layupTotal: 0,
-              middyMakes: 0, middyTotal: 0,
-              threeMakes: 0, threeTotal: 0,
-              // Phase Breakdown
-              flowZoneMakes: 0, flowZoneTotal: 0,
-              execZoneMakes: 0, execZoneTotal: 0,
-              panicZoneMakes: 0, panicZoneTotal: 0,
-              turnovers: 0,
-              liveTacticalNotes: [],
-              // Total accumulation of touches per specific player ID across entire game session
-              playerTotalTouches: {} 
-            };
+
+          // Strictly initialized state to start entirely at 0/0 and ONLY update upon verified sequence completion
+          const [gameStats, setGameStats] = useState({
+            totalPossessions: 0,
+            avgSecondsPerTouch: 0,
+            totalTouchesAcrossGame: 0,
+            layupMakes: 0, layupTotal: 0,
+            middyMakes: 0, middyTotal: 0,
+            threeMakes: 0, threeTotal: 0,
+            flowZoneMakes: 0, flowZoneTotal: 0,
+            execZoneMakes: 0, execZoneTotal: 0,
+            panicZoneMakes: 0, panicZoneTotal: 0,
+            turnovers: 0,
+            liveTacticalNotes: [],
+            playerTotalTouches: {}
           });
 
-          // Persistent Sync Engine using local storage updates
+          // --- CORE AUTH INITS (Conforming to Rule 3) ---
           useEffect(() => {
-            localStorage.setItem('te_view', view);
-            localStorage.setItem('te_gameTitle', gameTitle);
-            localStorage.setItem('te_fullRoster', JSON.stringify(fullRoster));
-            localStorage.setItem('te_gameStats', JSON.stringify(gameStats));
-          }, [view, gameTitle, fullRoster, gameStats]);
+            const initAuth = async () => {
+              try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                  await auth.signInWithCustomToken(__initial_auth_token);
+                } else {
+                  if (!auth.currentUser) {
+                    await auth.signInAnonymously();
+                  }
+                }
+              } catch (err) {
+                console.error("Firebase auth initialization failed", err);
+              }
+            };
+            initAuth();
 
-          // Timer Execution Loop
-          useEffect(() => {
-            let interval;
-            if (isTimerRunning) {
-              interval = setInterval(() => {
-                setCurrentPossessionTime((prev) => prev + 1);
-              }, 1000);
+            const unsubscribe = auth.onAuthStateChanged((u) => {
+              setUser(u);
+              if (u) {
+                fetchRosterVault(u.uid);
+                fetchGameArchives(u.uid);
+              }
+            });
+            return () => unsubscribe();
+          }, []);
+
+          // --- FIRESTORE PERSISTENCE DATA FLOWS (Rule 1 & Rule 2 compliant) ---
+          const fetchRosterVault = async (uid) => {
+            if (!uid) return;
+            try {
+              // Rule 1 Private Path + Rule 2 Plain Query
+              const snap = await db.collection('artifacts').doc(appId)
+                .collection('users').doc(uid).collection('rosters').get();
+              const list = [];
+              snap.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
+              setSavedRosters(list);
+            } catch (err) {
+              console.error("Failed fetching rosters", err);
             }
-            return () => clearInterval(interval);
-          }, [isTimerRunning]);
-
-          // Handle Roster Variations
-          const handleRosterNameChange = (id, newName) => {
-            setFullRoster(prev => prev.map(p => p.id === id ? { ...p, name: newName } : p));
           };
 
-          const handleRosterNumberChange = (id, newNum) => {
-            setFullRoster(prev => prev.map(p => p.id === id ? { ...p, number: newNum } : p));
+          const fetchGameArchives = async (uid) => {
+            if (!uid) return;
+            try {
+              // Rule 1 Private Path + Rule 2 Plain Query
+              const snap = await db.collection('artifacts').doc(appId)
+                .collection('users').doc(uid).collection('games').get();
+              const list = [];
+              snap.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
+              // Sort by date manually in memory to avoid index requirements (Rule 2)
+              list.sort((a, b) => b.timestamp - a.timestamp);
+              setSavedGames(list);
+            } catch (err) {
+              console.error("Failed fetching archived games", err);
+            }
           };
 
-          const addNewPlayer = () => {
-            if (!newPlayerName.trim() || !newPlayerNumber.trim()) {
-              alert("Please input both a name and a jersey number to add a player.");
+          const handleSaveRosterToVault = async () => {
+            if (!user) return;
+            const name = prompt("Enter a name for this Roster Preset (e.g., 'Varsity Starters'):");
+            if (!name) return;
+
+            try {
+              const payload = {
+                title: name,
+                roster: fullRoster,
+                timestamp: Date.now()
+              };
+              await db.collection('artifacts').doc(appId)
+                .collection('users').doc(user.uid).collection('rosters').add(payload);
+              showToast("Roster preset saved successfully to Vault!", "success");
+              fetchRosterVault(user.uid);
+            } catch (err) {
+              showToast("Failed to save roster to cloud.", "error");
+            }
+          };
+
+          const handleLoadRoster = (preset) => {
+            setFullRoster(preset.roster);
+            showToast(`Loaded roster preset: "${preset.title}"`, "success");
+          };
+
+          const handleDeleteRoster = async (id, e) => {
+            e.stopPropagation();
+            if (!user || !confirm("Delete this roster preset?")) return;
+            try {
+              await db.collection('artifacts').doc(appId)
+                .collection('users').doc(user.uid).collection('rosters').doc(id).delete();
+              showToast("Preset removed.", "info");
+              fetchRosterVault(user.uid);
+            } catch (err) {
+              showToast("Error removing preset.", "error");
+            }
+          };
+
+          const handleSaveAndExitGame = async () => {
+            if (!user) return;
+            if (gameStats.totalPossessions === 0) {
+              // Simply exit back to setup menu if no plays were tracked
+              setView('setup');
               return;
             }
-            const newPlayer = {
-              id: Date.now(),
-              number: newPlayerNumber.trim(),
-              name: newPlayerName.trim(),
-              role: newPlayerRole,
-              active: false
-            };
-            setFullRoster(prev => [...prev, newPlayer]);
-            setNewPlayerName('');
-            setNewPlayerNumber('');
-          };
 
-          // On-The-Fly Rotation Management (Live Substitution Engine)
-          const handleSubstitution = (idToToggle) => {
-            const playerToToggle = fullRoster.find(p => p.id === idToToggle);
-            if (!playerToToggle) return;
-
-            if (!playerToToggle.active) {
-              const currentActiveCount = fullRoster.filter(p => p.active).length;
-              if (currentActiveCount >= 5) {
-                alert("There are already 5 players on the floor. Bench an active player first before subbing this player in.");
-                return;
-              }
-            }
-            
-            // Swap active node assignment state
-            setFullRoster(prev => prev.map(p => p.id === idToToggle ? { ...p, active: !p.active } : p));
-            
-            // Drop tracking link safely if active player was subbed out mid-possession
-            if (playerToToggle.id === activePlayer) {
-              setActivePlayer(null);
-            }
-          };
-
-          const activeOnCourtPlayers = fullRoster.filter(p => p.active);
-
-          // Fixed layout geometric court coordinates for up to 5 players
-          const courtCoordinates = [
-            { x: '50%', y: '78%' }, // Slot 1
-            { x: '22%', y: '55%' }, // Slot 2
-            { x: '78%', y: '55%' }, // Slot 3
-            { x: '35%', y: '30%' }, // Slot 4
-            { x: '50%', y: '18%' }  // Slot 5
-          ];
-
-          const handlePlayerTouch = (player) => {
-            if (!isTimerRunning) setIsTimerRunning(true);
-            setActivePlayer(player.id);
-            setCurrentSequence((prev) => [
-              ...prev, 
-              { 
-                role: player.role, 
-                name: player.name, 
-                playerId: player.id, 
-                timeStamp: currentPossessionTime 
-              }
-            ]);
-          };
-
-          // Primary Analytical Sequence Logic: Commits updates ONLY when tracking sequence terminal is verified
-          const handleEndPossession = (outcome) => {
-            setIsTimerRunning(false);
-            if (currentSequence.length === 0) return;
-
-            const finalTime = currentPossessionTime;
-            const lastTouch = currentSequence[currentSequence.length - 1];
-
-            // Generate localized dynamic telemetry comments
-            let calculatedNote = `Possession #${gameStats.totalPossessions + 1}: ${currentSequence.length} touch sequence over ${finalTime} seconds ended in a ${outcome.toLowerCase()} (${selectedLocation.toLowerCase()}) by ${lastTouch.name}.`;
-
-            setGameStats((prev) => {
-              const updated = { ...prev, totalPossessions: prev.totalPossessions + 1 };
+            try {
+              const payload = {
+                title: gameTitle || "Untethered Scrimmage",
+                system: system,
+                stats: gameStats,
+                roster: fullRoster,
+                timestamp: Date.now()
+              };
+              // Save to Firestore private directory path
+              await db.collection('artifacts').doc(appId)
+                .collection('users').doc(user.uid).collection('games').add(payload);
               
-              // Increment global touch counters
-              updated.totalTouchesAcrossGame += currentSequence.length;
+              showToast("Session synced and archived successfully!", "success");
               
-              // Map specific touch logs map inside game memory
-              currentSequence.forEach((touch) => {
-                const currentCount = updated.playerTotalTouches[touch.playerId] || 0;
-                updated.playerTotalTouches[touch.playerId] = currentCount + 1;
-              });
-
-              // Apply contextual filters based on selection parameter attributes
-              if (outcome === 'MAKE') {
-                if (selectedLocation === 'LAYUP') { updated.layupMakes += 1; updated.layupTotal += 1; }
-                if (selectedLocation === 'MIDDY') { updated.middyMakes += 1; updated.middyTotal += 1; }
-                if (selectedLocation === '3PT') { updated.threeMakes += 1; updated.threeTotal += 1; }
-              } else if (outcome === 'MISS') {
-                if (selectedLocation === 'LAYUP') updated.layupTotal += 1;
-                if (selectedLocation === 'MIDDY') updated.middyTotal += 1;
-                if (selectedLocation === '3PT') updated.threeTotal += 1;
-              } else if (outcome === 'TURNOVER') {
-                updated.turnovers += 1;
-              }
-
-              // Evaluate possession timeline ranges
-              if (finalTime <= 6) {
-                updated.flowZoneTotal += 1;
-                if (outcome === 'MAKE') updated.flowZoneMakes += 1;
-              } else if (finalTime <= 14) {
-                updated.execZoneTotal += 1;
-                if (outcome === 'MAKE') updated.execZoneMakes += 1;
-              } else {
-                updated.panicZoneTotal += 1;
-                if (outcome === 'MAKE') updated.panicZoneMakes += 1;
-              }
-
-              // Compute moving average metrics
-              updated.avgSecondsPerTouch = updated.totalPossessions > 0 ? (updated.totalTouchesAcrossGame / updated.totalPossessions).toFixed(1) : 0;
-
-              // Append verified terminal telemetry feed note
-              updated.liveTacticalNotes = [calculatedNote, ...prev.liveTacticalNotes];
-
-              return updated;
-            });
-
-            // Re-initialize session counters for subsequent execution path
-            setCurrentPossessionTime(0);
-            setActivePlayer(null);
-            setCurrentSequence([]);
-          };
-
-          // Reset baseline numbers back to absolute zero
-          const clearAllSessionData = () => {
-            if(confirm("Are you sure you want to erase all accumulated session data? This restarts all tracked percentages back to zero.")) {
-              const resetStats = {
+              // Reset tracker metrics for clean reload
+              setGameStats({
                 totalPossessions: 0,
                 avgSecondsPerTouch: 0,
                 totalTouchesAcrossGame: 0,
@@ -262,401 +291,984 @@
                 turnovers: 0,
                 liveTacticalNotes: [],
                 playerTotalTouches: {}
-              };
-              setGameStats(resetStats);
-              localStorage.setItem('te_gameStats', JSON.stringify(resetStats));
+              });
+              
+              fetchGameArchives(user.uid);
+              setView('setup');
+            } catch (err) {
+              showToast("Failed to save active session data.", "error");
             }
           };
 
-          const calcPct = (makes, total) => (total > 0 ? ((makes / total) * 100).toFixed(1) : "0.0");
+          // --- CUSTOM ACCOUNT MANAGEMENT (Username / Email support) ---
+          const handleAuthSubmit = async (e) => {
+            e.preventDefault();
+            setAuthLoading(true);
+            
+            // Format username entries as localized mock email addresses to support standard Firebase Email Auth flow
+            const processedEmail = loginType === 'username' 
+              ? `${usernameInput.trim().toLowerCase()}@toucheconomy.app` 
+              : emailInput.trim();
 
-          // Calculate normalized "Touches per 5 Possessions" window metrics
-          const getTouchesPerFivePossessions = (playerId) => {
-            if (gameStats.totalPossessions === 0) return "0.0";
-            const rawTouches = gameStats.playerTotalTouches[playerId] || 0;
-            return ((rawTouches / gameStats.totalPossessions) * 5).toFixed(1);
+            try {
+              if (authMode === 'signup') {
+                await auth.createUserWithEmailAndPassword(processedEmail, passwordInput);
+                showToast("Account created successfully!", "success");
+              } else {
+                await auth.signInWithEmailAndPassword(processedEmail, passwordInput);
+                showToast("Successfully logged in!", "success");
+              }
+              // Reset input metrics
+              setUsernameInput('');
+              setEmailInput('');
+              setPasswordInput('');
+            } catch (err) {
+              showToast(err.message, "error");
+            } finally {
+              setAuthLoading(false);
+            }
           };
 
-          // VIEW 1: PRE-GAME SETUP & ROSTER CREATION MENU
-          if (view === 'setup') {
-            return (
-              <div className="min-h-screen bg-slate-950 text-slate-100 p-6 md:p-12 flex items-center justify-center">
-                <div className="max-w-2xl w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl">
-                  <div className="text-center mb-6">
-                    <span className="bg-orange-500/10 text-orange-400 font-mono text-xs px-3 py-1 rounded-full border border-orange-500/20 font-bold uppercase tracking-widest"> Roster & Parameter Setup</span>
-                    <h1 className="text-3xl font-black mt-3 bg-gradient-to-r from-orange-500 to-amber-400 bg-clip-text text-transparent">TOUCH ECONOMY TRACKER</h1>
-                    <p className="text-sm text-slate-400 mt-1">Configure active rosters, jersey tracking numbers, and deploy monitoring panels.</p>
+          const handleSignOut = async () => {
+            try {
+              await auth.signOut();
+              await auth.signInAnonymously();
+              showToast("Signed out. Operating on local memory.", "info");
+            } catch (err) {
+              console.error("Sign out fail", err);
+            }
+          };
+
+          // --- CORE ANALYTICAL HANDLERS ---
+          const handleAddPlayerToPool = () => {
+            if (!tempName.trim() || !tempNumber.trim()) {
+              showToast("Enter both player name and jersey number.", "error");
+              return;
+            }
+            const isDuplicate = fullRoster.some(p => p.number === tempNumber);
+            if (isDuplicate) {
+              showToast(`Jersey #${tempNumber} is already taken on this roster.`, "error");
+              return;
+            }
+            const newPlayer = {
+              id: Date.now(),
+              number: tempNumber.trim(),
+              name: tempName.trim(),
+              role: tempRole,
+              active: false
+            };
+            setFullRoster(prev => [...prev, newPlayer]);
+            setTempName('');
+            setTempNumber('');
+            showToast(`Added #${tempNumber} ${tempName} to the bench pool.`, "success");
+          };
+
+          const handleLiveSubstitution = (idToToggle) => {
+            const player = fullRoster.find(p => p.id === idToToggle);
+            if (!player) return;
+
+            if (!player.active) {
+              const currentActiveCount = fullRoster.filter(p => p.active).length;
+              if (currentActiveCount >= 5) {
+                showToast("Only 5 active players allowed on the court at once!", "error");
+                return;
+              }
+            }
+
+            setFullRoster(prev => prev.map(p => {
+              if (p.id === idToToggle) {
+                return { ...p, active: !p.active };
+              }
+              return p;
+            }));
+
+            // Safely dismount target as active controller if subbed mid-possession
+            if (player.id === activePlayer) {
+              setActivePlayer(null);
+            }
+          };
+
+          const activeOnCourtPlayers = fullRoster.filter(p => p.active);
+
+          // Standardized coordinates for visual mapping representation
+          const courtCoordinates = [
+            { x: '50%', y: '80%' }, // Position 1 (Top / Guard)
+            { x: '24%', y: '56%' }, // Position 2 (Left Wing)
+            { x: '76%', y: '56%' }, // Position 3 (Right Wing)
+            { x: '36%', y: '32%' }, // Position 4 (Left Block)
+            { x: '50%', y: '16%' }  // Position 5 (Paint Center)
+          ];
+
+          const handlePossessionAction = (player) => {
+            if (!isTimerRunning) {
+              setIsTimerRunning(true);
+            }
+            setActivePlayer(player.id);
+            setCurrentSequence(prev => [...prev, {
+              role: player.role,
+              name: player.name,
+              playerId: player.id,
+              timeStamp: currentPossessionTime
+            }]);
+          };
+
+          // Update game stats strictly on complete
+          const handleEndPossession = (outcome) => {
+            setIsTimerRunning(false);
+            if (currentSequence.length === 0) return;
+
+            const finalTime = currentPossessionTime;
+            const lastTouch = currentSequence[currentSequence.length - 1];
+
+            // Generate contextual feedback notes
+            const completeNote = `Possession #${gameStats.totalPossessions + 1}: ${currentSequence.length} touch sequence over ${finalTime}s ended in a ${outcome.toLowerCase()} (${selectedLocation}) by ${lastTouch.name}.`;
+
+            setGameStats(prev => {
+              const updated = { ...prev };
+              updated.totalPossessions += 1;
+              updated.totalTouchesAcrossGame += currentSequence.length;
+
+              // Accumulate player-specific touch volume in deep memory
+              currentSequence.forEach(touch => {
+                const prevCount = updated.playerTotalTouches[touch.playerId] || 0;
+                updated.playerTotalTouches[touch.playerId] = prevCount + 1;
+              });
+
+              // Increment Shot Matrix Outcomes
+              if (outcome === 'MAKE') {
+                if (selectedLocation === 'LAYUP') { updated.layupMakes += 1; updated.layupTotal += 1; }
+                if (selectedLocation === 'MIDDY') { updated.middyMakes += 1; updated.middyTotal += 1; }
+                if (selectedLocation === '3PT') { updated.threeMakes += 1; updated.threeTotal += 1; }
+              } else if (outcome === 'MISS') {
+                if (selectedLocation === 'LAYUP') updated.layupTotal += 1;
+                if (selectedLocation === 'MIDDY') updated.middyTotal += 1;
+                if (selectedLocation === '3PT') updated.threeTotal += 1;
+              } else if (outcome === 'TURNOVER') {
+                updated.turnovers += 1;
+              }
+
+              // Evaluate Possession Timeline Bracket Metrics
+              if (finalTime <= 6) {
+                updated.flowZoneTotal += 1;
+                if (outcome === 'MAKE') updated.flowZoneMakes += 1;
+              } else if (finalTime <= 14) {
+                updated.execZoneTotal += 1;
+                if (outcome === 'MAKE') updated.execZoneMakes += 1;
+              } else {
+                updated.panicZoneTotal += 1;
+                if (outcome === 'MAKE') updated.panicZoneMakes += 1;
+              }
+
+              // Adjust ball movement aggregates
+              updated.avgSecondsPerTouch = updated.totalPossessions > 0 
+                ? (updated.totalTouchesAcrossGame / updated.totalPossessions).toFixed(1) 
+                : 0;
+
+              // Append tactical notes directly
+              updated.liveTacticalNotes = [completeNote, ...prev.liveTacticalNotes];
+
+              return updated;
+            });
+
+            // Clean active track session variables
+            setCurrentPossessionTime(0);
+            setActivePlayer(null);
+            setCurrentSequence([]);
+          };
+
+          // Safe math helper
+          const calcPct = (makes, total) => (total > 0 ? ((makes / total) * 100).toFixed(1) : "0.0");
+
+          // Calculate normalized player inclusivity factor (touches / total possessions * 5)
+          const getTouchesPerFivePossessions = (stats, playerId) => {
+            if (stats.totalPossessions === 0) return "0.0";
+            const touches = stats.playerTotalTouches[playerId] || 0;
+            return ((touches / stats.totalPossessions) * 5).toFixed(1);
+          };
+
+          const handleOpenReview = (game) => {
+            setSelectedArchivedGame(game);
+            setView('review');
+          };
+
+          const handleDeleteArchivedGame = async (id, e) => {
+            e.stopPropagation();
+            if (!user || !confirm("Delete this archived game session forever?")) return;
+            try {
+              await db.collection('artifacts').doc(appId)
+                .collection('users').doc(user.uid).collection('games').doc(id).delete();
+              showToast("Archived session deleted.", "info");
+              fetchGameArchives(user.uid);
+            } catch (err) {
+              showToast("Error deleting archived record.", "error");
+            }
+          };
+
+          return (
+            <div className="min-h-screen bg-[#070b13] text-slate-100 flex flex-col justify-between">
+              
+              {/* Dynamic Notification Toast */}
+              {toast.visible && (
+                <div className={`fixed top-4 right-4 z-50 px-5 py-3.5 rounded-2xl shadow-2xl border flex items-center gap-3 transition-all duration-300 animate-bounce ${
+                  toast.type === 'success' ? 'bg-emerald-950/90 border-emerald-500/40 text-emerald-400' :
+                  toast.type === 'error' ? 'bg-rose-950/90 border-rose-500/40 text-rose-400' :
+                  'bg-slate-900/90 border-slate-800 text-slate-300'
+                }`}>
+                  <span className="text-lg">
+                    {toast.type === 'success' ? '✓' : toast.type === 'error' ? '✕' : 'ℹ'}
+                  </span>
+                  <span className="text-xs font-bold font-sans tracking-wide">{toast.message}</span>
+                </div>
+              )}
+
+              {/* Top Global Navigation Bar */}
+              <header className="border-b border-slate-900 bg-[#090d16]/70 backdrop-blur-md sticky top-0 z-40 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center font-black text-slate-950 shadow-lg shadow-orange-500/10">
+                    TE
                   </div>
+                  <div>
+                    <h1 className="text-xl font-black bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-300 bg-clip-text text-transparent">THE TOUCH ECONOMY</h1>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Professional Basketball Telemetry Board</p>
+                  </div>
+                </div>
 
-                  <div className="space-y-6">
-                    {/* Game Identifier */}
-                    <div>
-                      <label className="block text-xs uppercase font-black tracking-wider text-slate-400 mb-2">Game Event Title</label>
-                      <input 
-                        type="text" 
-                        value={gameTitle} 
-                        onChange={(e) => setGameTitle(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-orange-500 text-slate-200"
-                      />
-                    </div>
-
-                    {/* Add New Player Sub-Form Component */}
-                    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800/60">
-                      <label className="block text-xs uppercase font-black tracking-wider text-slate-400 mb-2">Add New Player to Roster Pool</label>
-                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                        <input 
-                          type="text" 
-                          placeholder="Player Name" 
-                          value={newPlayerName}
-                          onChange={(e) => setNewPlayerName(e.target.value)}
-                          className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-orange-500 sm:col-span-2"
-                        />
-                        <input 
-                          type="text" 
-                          placeholder="Jersey #" 
-                          value={newPlayerNumber}
-                          onChange={(e) => setNewPlayerNumber(e.target.value)}
-                          className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-orange-500"
-                        />
-                        <select 
-                          value={newPlayerRole} 
-                          onChange={(e) => setNewPlayerRole(e.target.value)}
-                          className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-2 text-xs focus:outline-none focus:border-orange-500 text-slate-300"
-                        >
-                          <option value="PG">PG</option>
-                          <option value="SG">SG</option>
-                          <option value="SF">SF</option>
-                          <option value="PF">PF</option>
-                          <option value="C">C</option>
-                          <option value="G">G</option>
-                          <option value="F">F</option>
-                        </select>
-                      </div>
-                      <button 
-                        onClick={addNewPlayer}
-                        className="w-full mt-3 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 font-bold py-2 rounded-lg text-xs transition-all"
-                      >
-                        + Append Player to Squad Registry
+                {/* Cloud Database Authenticated Space Indicator */}
+                <div className="flex items-center gap-4">
+                  {user && !user.isAnonymous ? (
+                    <div className="flex items-center gap-3 bg-slate-900/80 border border-slate-800 px-4 py-2 rounded-2xl">
+                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></div>
+                      <span className="text-xs font-bold text-slate-200">
+                        {user.email.endsWith('@toucheconomy.app') ? user.email.split('@')[0] : user.email}
+                      </span>
+                      <button onClick={handleSignOut} className="text-[10px] font-black uppercase text-rose-400 hover:text-rose-300 transition-colors ml-2">
+                        Sign Out
                       </button>
                     </div>
+                  ) : (
+                    <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 px-4 py-2 rounded-2xl">
+                      <div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
+                      <span className="text-xs font-bold text-amber-500">Anonymous Safe Workspace</span>
+                    </div>
+                  )}
+                </div>
+              </header>
 
-                    {/* Editable Pool Block */}
+              {/* --- VIEW 1: PREMIUM MENU, CONFIG & VAULT PANEL --- */}
+              {view === 'setup' && (
+                <main className="max-w-7xl mx-auto w-full p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start flex-1">
+                  
+                  {/* Left Setup Configuration Options */}
+                  <div className="lg:col-span-7 bg-[#090d16]/50 border border-slate-900 rounded-3xl p-6 shadow-2xl space-y-6">
                     <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <label className="block text-xs uppercase font-black tracking-wider text-slate-400">Roster Registry & Floor Assignment (Select Exactly 5 Active)</label>
-                        <span className="text-xs font-mono text-orange-400 font-bold">{fullRoster.filter(p=>p.active).length} / 5 Active On Court</span>
+                      <span className="bg-orange-500/10 text-orange-400 font-mono text-[10px] px-3 py-1 rounded-full border border-orange-500/20 font-bold uppercase tracking-widest">Configuration Console</span>
+                      <h2 className="text-2xl font-black mt-2">INITIALIZE NEW TELEMETRY SESSION</h2>
+                      <p className="text-xs text-slate-400 mt-1">Setup parameters to track and analyze team dynamics in real-time.</p>
+                    </div>
+
+                    <div className="space-y-4">
+                      {/* Game Title Metadata Input (Clean and Blank) */}
+                      <div>
+                        <label className="block text-xs uppercase font-black tracking-wider text-slate-400 mb-2">Game Designation Name</label>
+                        <input 
+                          type="text" 
+                          placeholder="e.g. Scrimmage vs Blue Devils (Leave blank for generic)"
+                          value={gameTitle} 
+                          onChange={(e) => setGameTitle(e.target.value)}
+                          className="w-full bg-slate-950/80 border border-slate-800 focus:border-orange-500 focus:outline-none rounded-2xl px-4 py-3 text-sm font-semibold transition-all text-slate-200"
+                        />
                       </div>
-                      
-                      <div className="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden max-h-[220px] overflow-y-auto divide-y divide-slate-900">
-                        {fullRoster.map((player) => (
-                          <div key={player.id} className="p-3 flex items-center justify-between gap-4">
-                            <div className="flex items-center gap-3 flex-1">
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-[10px] text-slate-500 font-bold">#</span>
+
+                      {/* Offensive System Preset Selector */}
+                      <div>
+                        <label className="block text-xs uppercase font-black tracking-wider text-slate-400 mb-2">System Style Matrix</label>
+                        <div className="grid grid-cols-2 gap-4">
+                          <button 
+                            onClick={() => setSystem('motion')}
+                            className={`p-4 rounded-2xl border text-left font-bold transition-all relative overflow-hidden ${system === 'motion' ? 'bg-orange-500/5 border-orange-500/50 text-orange-400' : 'bg-slate-950/40 border-slate-800 text-slate-400'}`}
+                          >
+                            <div className="text-xs">Motion / Share Scheme</div>
+                            <div className="text-[10px] font-normal mt-1 opacity-70">Focuses heavily on ball velocity index and positional touch volume sharing.</div>
+                          </button>
+                          <button 
+                            onClick={() => setSystem('isolation')}
+                            className={`p-4 rounded-2xl border text-left font-bold transition-all relative overflow-hidden ${system === 'isolation' ? 'bg-orange-500/5 border-orange-500/50 text-orange-400' : 'bg-slate-950/40 border-slate-800 text-slate-400'}`}
+                          >
+                            <div className="text-xs">Star Isolation / Helio-centric</div>
+                            <div className="text-[10px] font-normal mt-1 opacity-70">Tracks dribble holding taxes, stagnation, and corner catch-and-shoot latency.</div>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Active Session Team Builder Setup */}
+                      <div className="border-t border-slate-900 pt-5">
+                        <div className="flex justify-between items-center mb-3">
+                          <label className="block text-xs uppercase font-black tracking-wider text-slate-400">Team Roster Construction (Exactly 5 On Floor)</label>
+                          <span className="text-xs font-mono font-black text-orange-400">
+                            {fullRoster.filter(p => p.active).length} / 5 Assigned
+                          </span>
+                        </div>
+
+                        {/* Interactive List Entry Grid */}
+                        <div className="bg-slate-950/60 border border-slate-900 rounded-2xl overflow-hidden divide-y divide-slate-900">
+                          {fullRoster.map((player) => (
+                            <div key={player.id} className="p-3.5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                              <div className="flex items-center gap-3 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[11px] text-slate-500 font-bold">#</span>
+                                  <input 
+                                    type="text" 
+                                    placeholder="Jersey"
+                                    value={player.number}
+                                    onChange={(e) => handleRosterNumberChange(player.id, e.target.value)}
+                                    className="w-12 bg-slate-900/80 border border-slate-800 rounded-xl text-center text-xs text-orange-400 font-mono font-bold py-1.5 focus:outline-none focus:border-orange-500"
+                                  />
+                                </div>
                                 <input 
                                   type="text" 
-                                  value={player.number}
-                                  onChange={(e) => handleRosterNumberChange(player.id, e.target.value)}
-                                  className="w-10 bg-slate-900 border border-slate-800 rounded text-center text-xs text-orange-400 font-mono font-bold py-1"
+                                  placeholder="Enter Custom Player Name"
+                                  value={player.name}
+                                  onChange={(e) => handleRosterNameChange(player.id, e.target.value)}
+                                  className="bg-transparent border-b border-transparent hover:border-slate-800 focus:border-orange-500 focus:outline-none text-xs font-bold text-slate-200 py-1.5 px-2 flex-1 transition-all"
                                 />
+                                <span className="text-[9px] bg-slate-900 border border-slate-800 text-slate-400 px-2 py-0.5 rounded font-black uppercase">{player.role}</span>
                               </div>
-                              <input 
-                                type="text" 
-                                value={player.name}
-                                onChange={(e) => handleRosterNameChange(player.id, e.target.value)}
-                                className="bg-transparent border-b border-transparent hover:border-slate-800 focus:border-orange-500 focus:outline-none text-xs font-bold text-slate-200 py-1 px-1 flex-1"
-                              />
-                              <span className="text-[9px] bg-slate-900 border border-slate-800 text-slate-500 px-1.5 py-0.5 rounded font-bold uppercase">{player.role}</span>
+                              <button 
+                                onClick={() => handleLiveSubstitution(player.id)}
+                                className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all ${player.active ? 'bg-orange-500/10 text-orange-400 border border-orange-500/30' : 'bg-slate-900 border border-slate-800 text-slate-500'}`}
+                              >
+                                {player.active ? 'On Court' : 'Bench'}
+                              </button>
                             </div>
+                          ))}
+                        </div>
+
+                        {/* Append custom player controls */}
+                        <div className="mt-4 bg-slate-950 p-4 rounded-2xl border border-slate-900 flex flex-col sm:flex-row gap-3">
+                          <input 
+                            type="text" 
+                            placeholder="Add Player Name" 
+                            value={tempName}
+                            onChange={(e) => setTempName(e.target.value)}
+                            className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-orange-500 flex-1"
+                          />
+                          <input 
+                            type="text" 
+                            placeholder="Jersey #" 
+                            value={tempNumber}
+                            onChange={(e) => setTempNumber(e.target.value)}
+                            className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-orange-500 w-20"
+                          />
+                          <select 
+                            value={tempRole} 
+                            onChange={(e) => setTempRole(e.target.value)}
+                            className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none text-slate-300"
+                          >
+                            <option value="PG">PG</option>
+                            <option value="SG">SG</option>
+                            <option value="SF">SF</option>
+                            <option value="PF">PF</option>
+                            <option value="C">C</option>
+                          </select>
+                          <button 
+                            onClick={handleAddPlayerToPool}
+                            className="bg-slate-900 hover:bg-slate-800 border border-slate-800 px-4 py-2 rounded-xl text-xs font-black text-slate-300 transition-all"
+                          >
+                            + Add Player
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-4 pt-4">
+                        <button 
+                          onClick={handleSaveRosterToVault}
+                          disabled={!user || user.isAnonymous}
+                          className="flex-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 font-bold py-3 px-4 rounded-2xl text-xs uppercase tracking-wider transition-all disabled:opacity-40"
+                        >
+                          💾 Save Current Roster to Vault
+                        </button>
+                        <button 
+                          onClick={() => {
+                            if (fullRoster.filter(p => p.active).length !== 5) {
+                              showToast("Please assign exactly 5 on-court players first!", "error");
+                              return;
+                            }
+                            setView('dashboard');
+                          }}
+                          className="flex-1 bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-slate-950 font-black py-3 px-4 rounded-2xl text-xs uppercase tracking-wider transition-all shadow-xl shadow-orange-500/5"
+                        >
+                          Launch Active Tracker ➔
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Portal and Vault Databases */}
+                  <div className="lg:col-span-5 space-y-6">
+                    
+                    {/* User Login & Account Space Section */}
+                    <div className="bg-[#090d16]/50 border border-slate-900 rounded-3xl p-6 shadow-2xl">
+                      <h3 className="text-sm font-black flex items-center gap-2 text-slate-200 uppercase tracking-wide">
+                        <ShieldCheck /> Account Synchronization Vault
+                      </h3>
+                      <p className="text-[11px] text-slate-400 mt-0.5">Link your tracking telemetry, saved rosters, and game archives securely.</p>
+
+                      {(!user || user.isAnonymous) ? (
+                        <form onSubmit={handleAuthSubmit} className="space-y-4 mt-4">
+                          <div className="grid grid-cols-2 gap-2 bg-slate-950 p-1 rounded-xl">
                             <button 
-                              onClick={() => toggleOnCourt(player.id)}
-                              className={`px-3 py-1 rounded-lg text-[11px] font-black uppercase transition-all ${player.active ? 'bg-orange-500/10 text-orange-400 border border-orange-500/30' : 'bg-slate-900 border border-slate-800 text-slate-500'}`}
+                              type="button" 
+                              onClick={() => setAuthMode('login')}
+                              className={`py-1.5 rounded-lg text-xs font-bold transition-all ${authMode === 'login' ? 'bg-slate-900 text-orange-400 border border-slate-800/80' : 'text-slate-500'}`}
                             >
-                              {player.active ? 'On Court' : 'Bench'}
+                              Log In
+                            </button>
+                            <button 
+                              type="button" 
+                              onClick={() => setAuthMode('signup')}
+                              className={`py-1.5 rounded-lg text-xs font-bold transition-all ${authMode === 'signup' ? 'bg-slate-900 text-orange-400 border border-slate-800/80' : 'text-slate-500'}`}
+                            >
+                              Create Account
                             </button>
                           </div>
+
+                          <div className="grid grid-cols-2 gap-2 bg-slate-950 p-1 rounded-xl">
+                            <button 
+                              type="button" 
+                              onClick={() => setLoginType('username')}
+                              className={`py-1 rounded-md text-[10px] font-bold uppercase transition-all ${loginType === 'username' ? 'bg-slate-900 text-slate-200' : 'text-slate-500'}`}
+                            >
+                              Username
+                            </button>
+                            <button 
+                              type="button" 
+                              onClick={() => setLoginType('email')}
+                              className={`py-1 rounded-md text-[10px] font-bold uppercase transition-all ${loginType === 'email' ? 'bg-slate-900 text-slate-200' : 'text-slate-500'}`}
+                            >
+                              Email
+                            </button>
+                          </div>
+
+                          {loginType === 'username' ? (
+                            <div>
+                              <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1">Enter Username</label>
+                              <input 
+                                type="text" 
+                                placeholder="coach_adrian"
+                                value={usernameInput} 
+                                onChange={(e) => setUsernameInput(e.target.value)}
+                                className="w-full bg-slate-950 border border-slate-800 focus:border-orange-500 focus:outline-none rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-200"
+                                required
+                              />
+                            </div>
+                          ) : (
+                            <div>
+                              <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1">Enter Email</label>
+                              <input 
+                                type="email" 
+                                placeholder="coach@school.edu"
+                                value={emailInput} 
+                                onChange={(e) => setEmailInput(e.target.value)}
+                                className="w-full bg-slate-950 border border-slate-800 focus:border-orange-500 focus:outline-none rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-200"
+                                required
+                              />
+                            </div>
+                          )}
+
+                          <div>
+                            <label className="block text-[10px] uppercase font-black tracking-wider text-slate-500 mb-1">Password</label>
+                            <input 
+                              type="password" 
+                              placeholder="••••••••"
+                              value={passwordInput} 
+                              onChange={(e) => setPasswordInput(e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-800 focus:border-orange-500 focus:outline-none rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-200"
+                              required
+                            />
+                          </div>
+
+                          <button 
+                            type="submit" 
+                            disabled={authLoading}
+                            className="w-full bg-orange-600 hover:bg-orange-500 text-slate-100 font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all disabled:opacity-40"
+                          >
+                            {authLoading ? "Synchronizing..." : authMode === 'signup' ? "Complete Registration" : "Log In"}
+                          </button>
+                        </form>
+                      ) : (
+                        <div className="mt-4 bg-slate-950/80 rounded-2xl border border-slate-900 p-4 text-center">
+                          <p className="text-xs text-slate-300 font-bold">You are securely synced. Cloud storage is active.</p>
+                          <p className="text-[10px] text-slate-500 mt-1">Preset configurations and archived logs auto-save on demand.</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Roster Vault Databases Section */}
+                    <div className="bg-[#090d16]/50 border border-slate-900 rounded-3xl p-6 shadow-2xl">
+                      <h3 className="text-sm font-black flex items-center gap-2 text-slate-200 uppercase tracking-wide">
+                        <Users /> Saved Roster Presets
+                      </h3>
+                      <p className="text-[11px] text-slate-400 mt-0.5">Quickly import pre-configured roster templates straight into the live setup.</p>
+
+                      <div className="space-y-2 mt-4 max-h-[160px] overflow-y-auto">
+                        {savedRosters.length === 0 ? (
+                          <div className="text-xs text-slate-500 bg-slate-950/40 border border-slate-900 rounded-2xl p-4 text-center italic">
+                            No presets found. Sync an account and click "Save Current Roster to Vault" to add presets.
+                          </div>
+                        ) : (
+                          savedRosters.map((preset) => (
+                            <div 
+                              key={preset.id} 
+                              onClick={() => handleLoadRoster(preset)}
+                              className="bg-slate-950 hover:bg-slate-900 border border-slate-800/60 hover:border-orange-500/40 p-3 rounded-2xl flex items-center justify-between cursor-pointer transition-all"
+                            >
+                              <div>
+                                <h4 className="text-xs font-black text-slate-200">{preset.title}</h4>
+                                <p className="text-[10px] text-slate-500 font-mono mt-0.5">{preset.roster.length} registered athletes</p>
+                              </div>
+                              <button 
+                                onClick={(e) => handleDeleteRoster(preset.id, e)}
+                                className="text-[10px] bg-slate-900 hover:bg-rose-950/40 border border-slate-800 hover:border-rose-900/40 text-rose-400 px-2 py-1 rounded-lg font-black uppercase transition-colors"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Game Archives Logs Section */}
+                    <div className="bg-[#090d16]/50 border border-slate-900 rounded-3xl p-6 shadow-2xl">
+                      <h3 className="text-sm font-black flex items-center gap-2 text-slate-200 uppercase tracking-wide">
+                        <Database /> Game Archives & Logs
+                      </h3>
+                      <p className="text-[11px] text-slate-400 mt-0.5">Review complete game statistics and review play sequences.</p>
+
+                      <div className="space-y-2 mt-4 max-h-[160px] overflow-y-auto">
+                        {savedGames.length === 0 ? (
+                          <div className="text-xs text-slate-500 bg-slate-950/40 border border-slate-900 rounded-2xl p-4 text-center italic">
+                            No archived logs found. Complete and exit a session to sync telemetry.
+                          </div>
+                        ) : (
+                          savedGames.map((game) => (
+                            <div 
+                              key={game.id} 
+                              onClick={() => handleOpenReview(game)}
+                              className="bg-slate-950 hover:bg-slate-900 border border-slate-800/60 hover:border-orange-500/40 p-3 rounded-2xl flex items-center justify-between cursor-pointer transition-all"
+                            >
+                              <div>
+                                <h4 className="text-xs font-black text-slate-200">{game.title}</h4>
+                                <p className="text-[10px] text-slate-500 font-mono mt-0.5">
+                                  {game.stats.totalPossessions} Plays | {new Date(game.timestamp).toLocaleDateString()}
+                                </p>
+                              </div>
+                              <button 
+                                onClick={(e) => handleDeleteArchivedGame(game.id, e)}
+                                className="text-[10px] bg-slate-900 hover:bg-rose-950/40 border border-slate-800 hover:border-rose-900/40 text-rose-400 px-2.5 py-1 rounded-lg font-black uppercase transition-colors"
+                              >
+                                Clear Log
+                              </button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                  </div>
+                </main>
+              )}
+
+              {/* --- VIEW 2: ACTIVE LIVE ANALYTICS TRACKING DASHBOARD --- */}
+              {view === 'dashboard' && (
+                <main className="max-w-7xl mx-auto w-full p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start flex-1">
+                  
+                  {/* Left Column court and timeline node controls */}
+                  <div className="lg:col-span-5 bg-[#090d16]/50 border border-slate-900 rounded-3xl p-6 flex flex-col justify-between shadow-2xl backdrop-blur-sm">
+                    <div className="mb-4">
+                      <h2 className="text-sm font-black flex items-center gap-2 text-slate-200 uppercase tracking-wider">
+                        <Activity /> Court Sequence Telemetry Board
+                      </h2>
+                      <p className="text-[11px] text-slate-400 mt-0.5">Press player nodes in sequence as they touch the ball in the half-court.</p>
+                    </div>
+
+                    {/* Half court tactile grid container */}
+                    <div className="relative w-full aspect-[4/3] bg-slate-950 border-2 border-slate-800/80 rounded-2xl overflow-hidden shadow-inner mb-4 court-gradient">
+                      {/* Technical Line Guides */}
+                      <div className="absolute top-0 w-32 h-24 border border-slate-800/30 rounded-b-xl left-1/2 transform -translate-x-1/2 pointer-events-none"></div>
+                      <div className="absolute top-0 w-64 h-48 border border-slate-800/20 rounded-b-full left-1/2 transform -translate-x-1/2 pointer-events-none"></div>
+
+                      {/* On-Court Nodes (Displaying custom setup credentials cleanly) */}
+                      {activeOnCourtPlayers.slice(0, 5).map((player, index) => {
+                        const coords = courtCoordinates[index] || { x: '50%', y: '50%' };
+                        return (
+                          <button
+                            key={player.id}
+                            onClick={() => handlePossessionAction(player)}
+                            style={{ left: coords.x, top: coords.y }}
+                            className={`absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center w-15 h-15 rounded-full font-black text-xs border-2 transition-all duration-150 active:scale-95 shadow-md ${
+                              activePlayer === player.id 
+                                ? 'bg-gradient-to-br from-orange-500 to-amber-500 border-white text-slate-950 ring-4 ring-orange-500/20' 
+                                : 'bg-[#090d16] border-slate-800 text-slate-200 hover:border-orange-500 hover:text-orange-400'
+                            }`}
+                          >
+                            <span className="text-[9px] font-mono font-bold text-slate-400 leading-none mb-0.5">#{player.number || "?"}</span>
+                            <span className="truncate max-w-[50px] text-[10px] font-black">{player.name || "Anon"}</span>
+                            <span className="text-[8px] opacity-40 leading-none mt-0.5 uppercase">{player.role}</span>
+                          </button>
+                        );
+                      })}
+
+                      {/* Running timeline clock element */}
+                      <div className="absolute top-3 right-3 bg-slate-950/90 border border-slate-800 px-2.5 py-1.5 rounded-xl font-mono text-[10px] text-orange-400 flex items-center gap-1.5 shadow-md">
+                        <span className={`w-1.5 h-1.5 rounded-full bg-orange-500 ${isTimerRunning ? 'animate-ping' : ''}`}></span>
+                        Timeline Clock: {currentPossessionTime}s
+                      </div>
+                    </div>
+
+                    {/* Active Sequencer Logs box */}
+                    <div className="bg-slate-950 border border-slate-900 rounded-2xl p-3 min-h-[58px] mb-4">
+                      <div className="text-[10px] text-slate-500 uppercase font-black tracking-wider mb-1">Active Possession Sequence:</div>
+                      <div className="flex flex-wrap gap-1 items-center text-xs">
+                        {currentSequence.length === 0 ? (
+                          <span className="text-slate-600 italic text-[11px]">No touch registered. Awaiting initial half-court touch...</span>
+                        ) : (
+                          currentSequence.map((seq, i) => (
+                            <span key={i} className="flex items-center gap-1">
+                              <span className="bg-[#090d16] border border-slate-800 text-slate-300 px-2 py-0.5 rounded-lg font-mono text-[10px]">
+                                #{fullRoster.find(p => p.id === seq.playerId)?.number || seq.role}
+                              </span>
+                              {i < currentSequence.length - 1 && <span className="text-slate-700 text-[10px]">➔</span>}
+                            </span>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Shot location parameter attributes selector */}
+                    <div className="mb-4">
+                      <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-2">Set Outcome Target Location Attribute</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {['LAYUP', 'MIDDY', '3PT'].map((loc) => (
+                          <button
+                            key={loc}
+                            onClick={() => setSelectedLocation(loc)}
+                            className={`py-2 rounded-xl text-xs font-black tracking-wide border transition-all ${selectedLocation === loc ? 'bg-orange-500/10 border-orange-500 text-orange-400' : 'bg-slate-950 border-slate-800 text-slate-500'}`}
+                          >
+                            {loc}
+                          </button>
                         ))}
                       </div>
                     </div>
 
-                    <button 
-                      onClick={() => {
-                        if (fullRoster.filter(p=>p.active).length !== 5) {
-                          alert("Configuration error: You must select exactly 5 active players to occupy the court tracking slots before continuing!");
-                          return;
-                        }
-                        setView('dashboard');
-                      }}
-                      className="w-full bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white font-black py-3 rounded-xl uppercase text-xs tracking-wider transition-all shadow-xl"
-                    >
-                      Initialize Metrics Board ➔
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          }
-
-          // VIEW 2: ACTIVE RUN ANALYTICS LOGGING SUITE
-          return (
-            <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-4 md:p-8">
-              {/* Contextual Board Header */}
-              <header className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center border-b border-slate-800 pb-5 mb-6 gap-4">
-                <div>
-                  <div className="flex items-center gap-3">
-                    <h1 className="text-xl md:text-2xl font-black bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-300 bg-clip-text text-transparent">THE TOUCH ECONOMY MONITOR</h1>
-                    <span className="text-xs bg-slate-900 border border-slate-800 text-slate-300 px-2.5 py-0.5 rounded-md font-mono font-bold mt-0.5 uppercase">{gameTitle}</span>
-                  </div>
-                  <p className="text-xs text-slate-400 mt-0.5">Verified Sequential Recording Environment • Storage State Synchronized</p>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  <button onClick={clearAllSessionData} className="text-xs bg-rose-950/40 hover:bg-rose-900/40 border border-rose-900/40 text-rose-400 px-3 py-2 rounded-xl font-bold transition-all">
-                    Reset Stats
-                  </button>
-                  <button onClick={() => setView('setup')} className="text-xs bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 px-3 py-2 rounded-xl font-bold transition-all">
-                    ⚙️ Roster / Roster Configuration
-                  </button>
-                </div>
-              </header>
-
-              {/* Central Framework Architecture Grid */}
-              <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
-                
-                {/* Left Telemetry Column Module */}
-                <section className="lg:col-span-5 bg-slate-900/50 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between backdrop-blur-sm">
-                  <div className="mb-3">
-                    <h2 className="text-sm font-black flex items-center gap-2 text-slate-200 uppercase tracking-wide"><Activity /> Half-Court Capture Node Terminal</h2>
-                    <p className="text-[11px] text-slate-400">Map ball execution touches in sequence. Sub floor nodes using the right alignment controls instantly.</p>
+                    {/* Completed sequence action outcome triggers */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <button onClick={() => handleEndPossession('MAKE')} className="bg-emerald-600 hover:bg-emerald-500 text-white font-black py-3 rounded-xl text-xs uppercase tracking-wider transition-all">
+                        Log Make
+                      </button>
+                      <button onClick={() => handleEndPossession('MISS')} className="bg-rose-600 hover:bg-rose-500 text-white font-black py-3 rounded-xl text-xs uppercase tracking-wider transition-all">
+                        Log Miss
+                      </button>
+                      <button onClick={() => handleEndPossession('TURNOVER')} className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-black py-3 rounded-xl text-xs uppercase tracking-wider border border-slate-700 transition-all">
+                        Turnover
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Half-Court Geometric Visual Node Array Mapping */}
-                  <div className="relative w-full aspect-[4/3] bg-slate-950 border-2 border-slate-800 rounded-xl overflow-hidden shadow-inner mb-4">
-                    {/* Architectural Accent Reference Vectors */}
-                    <div className="absolute top-0 w-full h-full border-b border-slate-900/30 pointer-events-none"></div>
-                    <div className="absolute top-0 w-32 h-24 border border-slate-800/40 rounded-b-lg left-1/2 transform -translate-x-1/2 pointer-events-none"></div>
-                    <div className="absolute top-0 w-64 h-48 border border-slate-800/20 rounded-b-full left-1/2 transform -translate-x-1/2 pointer-events-none"></div>
+                  {/* Right Column Metrics Panel (Only updates upon verified sequence completions) */}
+                  <div className="lg:col-span-7 flex flex-col gap-6">
+                    
+                    {/* Time Phase Split Panel */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      
+                      {/* Shot Timeline Efficiencies */}
+                      <div className="bg-slate-900/40 border border-slate-900 rounded-2xl p-5">
+                        <h3 className="text-xs text-slate-400 font-black tracking-wider uppercase mb-3 flex items-center gap-1.5">
+                          <TrendingUp /> Time-Zone Efficiency Profiles
+                        </h3>
+                        <div className="space-y-3">
+                          <div>
+                            <div className="flex justify-between font-mono text-[10px] mb-0.5">
+                              <span className="text-emerald-400 font-bold">Flow Phase (0-6s)</span>
+                              <span>{gameStats.flowZoneMakes}/{gameStats.flowZoneTotal} ({calcPct(gameStats.flowZoneMakes, gameStats.flowZoneTotal)}%)</span>
+                            </div>
+                            <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden"><div className="bg-emerald-400 h-2 rounded-full transition-all" style={{ width: `${calcPct(gameStats.flowZoneMakes, gameStats.flowZoneTotal)}%` }}></div></div>
+                          </div>
+                          <div>
+                            <div className="flex justify-between font-mono text-[10px] mb-0.5">
+                              <span className="text-sky-400 font-bold">Execution Phase (7-14s)</span>
+                              <span>{gameStats.execZoneMakes}/{gameStats.execZoneTotal} ({calcPct(gameStats.execZoneMakes, gameStats.execZoneTotal)}%)</span>
+                            </div>
+                            <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden"><div className="bg-sky-400 h-2 rounded-full transition-all" style={{ width: `${calcPct(gameStats.execZoneMakes, gameStats.execZoneTotal)}%` }}></div></div>
+                          </div>
+                          <div>
+                            <div className="flex justify-between font-mono text-[10px] mb-0.5">
+                              <span className="text-rose-500 font-bold">Panic Phase (15s+)</span>
+                              <span>{gameStats.panicZoneMakes}/{gameStats.panicZoneTotal} ({calcPct(gameStats.panicZoneMakes, gameStats.panicZoneTotal)}%)</span>
+                            </div>
+                            <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden"><div className="bg-rose-500 h-2 rounded-full transition-all" style={{ width: `${calcPct(gameStats.panicZoneMakes, gameStats.panicZoneTotal)}%` }}></div></div>
+                          </div>
+                        </div>
+                      </div>
 
-                    {/* Active Court Mapping Position Nodes */}
-                    {activeOnCourtPlayers.slice(0, 5).map((player, index) => {
-                      const coords = courtCoordinates[index] || { x: '50%', y: '50%' };
-                      return (
-                        <button
-                          key={player.id}
-                          onClick={() => handlePlayerTouch(player)}
-                          style={{ left: coords.x, top: coords.y }}
-                          className={`absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center w-14 h-14 rounded-full font-black text-xs border-2 transition-all duration-150 active:scale-95 shadow-md ${
-                            activePlayer === player.id 
-                              ? 'bg-gradient-to-br from-orange-500 to-amber-500 border-white text-slate-950 ring-4 ring-orange-500/20' 
-                              : 'bg-slate-900 border-slate-700 text-slate-200 hover:border-orange-500 hover:text-orange-400'
-                          }`}
+                      {/* Location analytics */}
+                      <div className="bg-slate-900/40 border border-slate-900 rounded-2xl p-5">
+                        <h3 className="text-xs text-slate-400 font-black tracking-wider uppercase mb-3 flex items-center gap-1.5">
+                          <Users /> Shot Location Analytics
+                        </h3>
+                        <div className="space-y-3">
+                          <div>
+                            <div className="flex justify-between font-mono text-[10px] mb-0.5">
+                              <span className="text-purple-400 font-bold">Layups / Paint Looks</span>
+                              <span>{gameStats.layupMakes}/{gameStats.layupTotal} ({calcPct(gameStats.layupMakes, gameStats.layupTotal)}%)</span>
+                            </div>
+                            <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden"><div className="bg-purple-400 h-2 rounded-full transition-all" style={{ width: `${calcPct(gameStats.layupMakes, gameStats.layupTotal)}%` }}></div></div>
+                          </div>
+                          <div>
+                            <div className="flex justify-between font-mono text-[10px] mb-0.5">
+                              <span className="text-amber-400 font-bold">Mid-Range Jumpshots</span>
+                              <span>{gameStats.middyMakes}/{gameStats.middyTotal} ({calcPct(gameStats.middyMakes, gameStats.middyTotal)}%)</span>
+                            </div>
+                            <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden"><div className="bg-amber-400 h-2 rounded-full transition-all" style={{ width: `${calcPct(gameStats.middyMakes, gameStats.middyTotal)}%` }}></div></div>
+                          </div>
+                          <div>
+                            <div className="flex justify-between font-mono text-[10px] mb-0.5">
+                              <span className="text-indigo-400 font-bold">Perimeter 3-Pointers</span>
+                              <span>{gameStats.threeMakes}/{gameStats.threeTotal} ({calcPct(gameStats.threeMakes, gameStats.threeTotal)}%)</span>
+                            </div>
+                            <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden"><div className="bg-indigo-400 h-2 rounded-full transition-all" style={{ width: `${calcPct(gameStats.threeMakes, gameStats.threeTotal)}%` }}></div></div>
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
+
+                    {/* Substitution & Rotation Suite Panel */}
+                    <div className="bg-slate-900/30 border border-slate-900 rounded-2xl p-5">
+                      <h3 className="text-xs font-black text-slate-300 uppercase tracking-wider mb-2.5 flex items-center gap-2">
+                        🔄 Live Substitution Control Panel
+                      </h3>
+                      <div className="flex flex-wrap gap-2 max-h-[110px] overflow-y-auto">
+                        {fullRoster.map((player) => (
+                          <button
+                            key={player.id}
+                            onClick={() => handleLiveSubstitution(player.id)}
+                            className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition-all ${
+                              player.active 
+                                ? 'bg-orange-500/10 border-orange-500/50 text-orange-400' 
+                                : 'bg-slate-950 border-slate-900 text-slate-500 hover:text-slate-400 hover:border-slate-800'
+                            }`}
+                          >
+                            <span className="font-mono text-[10px]">#{player.number || "?"}</span>
+                            <span className="truncate max-w-[80px]">{player.name || "Unnamed"}</span>
+                            <span className="text-[8px] uppercase tracking-wider opacity-60">({player.active ? 'On Floor' : 'Bench'})</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Sequential Feedback logs list (Only logs completed runs) */}
+                    <div className="bg-slate-900/30 border border-slate-900 rounded-2xl p-5">
+                      <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-2.5 flex items-center gap-2">
+                        📋 Completed Play Sequence History Logs
+                      </h3>
+                      <div className="bg-slate-950 border border-slate-900 rounded-xl p-3.5 max-h-[105px] overflow-y-auto space-y-2 font-mono text-[11px] text-slate-400">
+                        {gameStats.liveTacticalNotes.length === 0 ? (
+                          <div className="text-slate-600 italic">No runs committed yet. Set outcomes and complete plays to record sequence history.</div>
+                        ) : (
+                          gameStats.liveTacticalNotes.map((note, idx) => (
+                            <div key={idx} className="border-l-2 border-orange-500 pl-2 py-0.5 bg-slate-900/40 rounded-r">
+                              {note}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Touches per 5 possessions index card */}
+                    <div className="bg-slate-900 border border-slate-900 rounded-3xl p-6 shadow-xl relative flex-1 flex flex-col justify-between">
+                      <div>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                          <h3 className="text-base font-black text-slate-200 flex items-center gap-2 uppercase tracking-wide">
+                            <Gamepad /> Touches Per 5 Possessions
+                          </h3>
+                          <div className="text-[10px] font-mono text-slate-400">Possession Count: {gameStats.totalPossessions}</div>
+                        </div>
+                        <p className="text-xs text-slate-400 mb-4 leading-normal">
+                          Tracks individual player volume across standardized 5-possession game segments. Quickly exposes unselfish play-makers versus stagnant baselines.
+                        </p>
+
+                        <div className="bg-slate-950 border border-slate-900 rounded-2xl p-4 divide-y divide-slate-900">
+                          {activeOnCourtPlayers.map((player) => {
+                            const touchesPerFive = getTouchesPerFivePossessions(gameStats, player.id);
+                            const cumulative = gameStats.playerTotalTouches[player.id] || 0;
+                            return (
+                              <div key={player.id} className="py-2.5 flex items-center justify-between text-xs font-mono">
+                                <div className="flex items-center gap-3">
+                                  <span className="text-orange-400 font-bold w-6">#{player.number || "?"}</span>
+                                  <span className="text-slate-200 font-bold font-sans text-sm">{player.name || "Unnamed"}</span>
+                                  <span className="text-[9px] bg-slate-900 border border-slate-800 text-slate-500 px-1.5 py-0.5 rounded font-black uppercase">{player.role}</span>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-slate-100 font-black text-sm">{touchesPerFive} <span className="text-[10px] text-slate-400 font-normal">Touches / 5 Poss</span></div>
+                                  <div className="text-[10px] text-slate-600">Total touches: {cumulative}</div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Active session save and egress button */}
+                      <div className="mt-5 pt-4 border-t border-slate-900 flex flex-col sm:flex-row gap-4 items-center justify-between">
+                        <div className="text-[11px] font-mono text-slate-500">
+                          Movement velocity index: {gameStats.avgSecondsPerTouch} Touches/Poss
+                        </div>
+                        <button 
+                          onClick={handleSaveAndExitGame}
+                          className="bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-slate-950 font-black px-6 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all"
                         >
-                          <span className="text-[9px] font-mono font-bold text-slate-400 leading-none mb-0.5">#{player.number}</span>
-                          <span className="truncate max-w-[48px] text-[10px] font-black">{player.name}</span>
-                          <span className="text-[8px] opacity-40 leading-none mt-0.5 uppercase">{player.role}</span>
+                          Save & Sync Game Archives ➔
                         </button>
-                      );
-                    })}
+                      </div>
 
-                    {/* Half-court Transition Stopwatch overlay */}
-                    <div className="absolute top-3 right-3 bg-slate-950/90 border border-slate-800 px-2.5 py-1 rounded-md font-mono text-[11px] text-orange-400 flex items-center gap-1.5">
-                      <span className={`w-1.5 h-1.5 rounded-full bg-orange-500 ${isTimerRunning ? 'animate-ping' : ''}`}></span>
-                      Timeline Clock: {currentPossessionTime}s
                     </div>
-                  </div>
 
-                  {/* Active Sequential Path Display Box */}
-                  <div className="bg-slate-950 border border-slate-800 rounded-xl p-2.5 min-h-[56px] mb-3">
-                    <div className="text-[10px] text-slate-500 uppercase font-bold tracking-tight mb-0.5">Active Sequence Path Log:</div>
-                    <div className="flex flex-wrap gap-1 items-center text-xs">
-                      {currentSequence.length === 0 ? (
-                        <span className="text-slate-600 italic text-[11px]">Awaiting initial half-court touch register...</span>
-                      ) : (
-                        currentSequence.map((seq, i) => (
-                          <span key={i} className="flex items-center gap-1">
-                            <span className="bg-slate-900 border border-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-mono text-[10px]">
-                              #{fullRoster.find(p=>p.id===seq.playerId)?.number || seq.role}
-                            </span>
-                            {i < currentSequence.length - 1 && <span className="text-slate-700 text-[10px]">➔</span>}
-                          </span>
-                        ))
-                      )}
-                    </div>
                   </div>
+                </main>
+              )}
 
-                  {/* Shot Location Filtering Attributes Selector */}
-                  <div className="mb-3">
-                    <label className="block text-[10px] uppercase font-black tracking-wider text-slate-400 mb-1">Set Outcome Target Location Attribute</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {['LAYUP', 'MIDDY', '3PT'].map((loc) => (
-                        <button
-                          key={loc}
-                          onClick={() => setSelectedLocation(loc)}
-                          className={`py-1 rounded-lg text-xs font-black tracking-wide border transition-all ${selectedLocation === loc ? 'bg-orange-500/10 border-orange-500 text-orange-400' : 'bg-slate-950 border-slate-800 text-slate-500'}`}
-                        >
-                          {loc}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Master Terminal Completion Controllers */}
-                  <div className="grid grid-cols-3 gap-2">
-                    <button onClick={() => handleEndPossession('MAKE')} className="bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2 rounded-lg text-xs uppercase tracking-wider transition-all">
-                      Log Make
-                    </button>
-                    <button onClick={() => handleEndPossession('MISS')} className="bg-rose-600 hover:bg-rose-500 text-white font-black py-2 rounded-lg text-xs uppercase tracking-wider transition-all">
-                      Log Miss
-                    </button>
-                    <button onClick={() => handleEndPossession('TURNOVER')} className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-black py-2 rounded-lg text-xs uppercase tracking-wider transition-all border border-slate-700">
-                      Turnover
-                    </button>
-                  </div>
-                </section>
-
-                {/* Right Analytics/Reporting Column Module */}
-                <section className="lg:col-span-7 flex flex-col gap-4">
+              {/* --- VIEW 3: HISTORICAL COMPLETED RECORD GAME VIEW --- */}
+              {view === 'review' && selectedArchivedGame && (
+                <main className="max-w-5xl mx-auto w-full p-6 bg-[#090d16]/50 border border-slate-900 rounded-3xl my-8 shadow-2xl flex-1 space-y-6">
                   
-                  {/* Dynamic Statistical Metrics Grid Split Panel */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Time Phase Split Array */}
-                    <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-4">
-                      <h3 className="text-xs text-slate-400 font-black tracking-wider uppercase mb-2.5 flex items-center gap-1.5"><TrendingUp /> Time-Zone Efficiency Profiles</h3>
-                      <div className="space-y-2">
+                  {/* Archived game header metadata details */}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-900 pb-5">
+                    <div>
+                      <span className="bg-orange-500/10 text-orange-400 font-mono text-[10px] px-3 py-1 rounded-full border border-orange-500/20 font-bold uppercase tracking-widest">Archived Game Summary</span>
+                      <h2 className="text-2xl font-black mt-2">{selectedArchivedGame.title}</h2>
+                      <p className="text-xs text-slate-400 mt-0.5">Offensive Style Profile: {selectedArchivedGame.system === 'motion' ? 'Motion Scheme' : 'Isolation Set'}</p>
+                    </div>
+                    <button 
+                      onClick={() => setView('setup')}
+                      className="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 px-4 py-2 rounded-xl text-xs font-black uppercase transition-all"
+                    >
+                      ← Close Review Mode
+                    </button>
+                  </div>
+
+                  {/* Summary split grid graphs */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    {/* Time efficiency ranges */}
+                    <div className="bg-slate-950 border border-slate-900 rounded-2xl p-5">
+                      <h3 className="text-xs text-slate-400 font-black tracking-wider uppercase mb-3 flex items-center gap-1.5">
+                        <TrendingUp /> Time-Zone Efficiency Profiles
+                      </h3>
+                      <div className="space-y-3">
                         <div>
-                          <div className="flex justify-between font-mono text-[10px] mb-0.5">
+                          <div className="flex justify-between font-mono text-xs mb-0.5">
                             <span className="text-emerald-400 font-bold">Flow Phase (0-6s)</span>
-                            <span>{gameStats.flowZoneMakes}/{gameStats.flowZoneTotal} ({calcPct(gameStats.flowZoneMakes, gameStats.flowZoneTotal)}%)</span>
+                            <span>{selectedArchivedGame.stats.flowZoneMakes}/{selectedArchivedGame.stats.flowZoneTotal} ({calcPct(selectedArchivedGame.stats.flowZoneMakes, selectedArchivedGame.stats.flowZoneTotal)}%)</span>
                           </div>
-                          <div className="w-full bg-slate-950 h-1.5 rounded-full"><div className="bg-emerald-400 h-1.5 rounded-full transition-all" style={{ width: `${calcPct(gameStats.flowZoneMakes, gameStats.flowZoneTotal)}%` }}></div></div>
+                          <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden"><div className="bg-emerald-400 h-2 rounded-full transition-all" style={{ width: `${calcPct(selectedArchivedGame.stats.flowZoneMakes, selectedArchivedGame.stats.flowZoneTotal)}%` }}></div></div>
                         </div>
                         <div>
-                          <div className="flex justify-between font-mono text-[10px] mb-0.5">
+                          <div className="flex justify-between font-mono text-xs mb-0.5">
                             <span className="text-sky-400 font-bold">Execution Phase (7-14s)</span>
-                            <span>{gameStats.execZoneMakes}/{gameStats.execZoneTotal} ({calcPct(gameStats.execZoneMakes, gameStats.execZoneTotal)}%)</span>
+                            <span>{selectedArchivedGame.stats.execZoneMakes}/{selectedArchivedGame.stats.execZoneTotal} ({calcPct(selectedArchivedGame.stats.execZoneMakes, selectedArchivedGame.stats.execZoneTotal)}%)</span>
                           </div>
-                          <div className="w-full bg-slate-950 h-1.5 rounded-full"><div className="bg-sky-400 h-1.5 rounded-full transition-all" style={{ width: `${calcPct(gameStats.execZoneMakes, gameStats.execZoneTotal)}%` }}></div></div>
+                          <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden"><div className="bg-sky-400 h-2 rounded-full transition-all" style={{ width: `${calcPct(selectedArchivedGame.stats.execZoneMakes, selectedArchivedGame.stats.execZoneTotal)}%` }}></div></div>
                         </div>
                         <div>
-                          <div className="flex justify-between font-mono text-[10px] mb-0.5">
+                          <div className="flex justify-between font-mono text-xs mb-0.5">
                             <span className="text-rose-500 font-bold">Panic Phase (15s+)</span>
-                            <span>{gameStats.panicZoneMakes}/{gameStats.panicZoneTotal} ({calcPct(gameStats.panicZoneMakes, gameStats.panicZoneTotal)}%)</span>
+                            <span>{selectedArchivedGame.stats.panicZoneMakes}/{selectedArchivedGame.stats.panicZoneTotal} ({calcPct(selectedArchivedGame.stats.panicZoneMakes, selectedArchivedGame.stats.panicZoneTotal)}%)</span>
                           </div>
-                          <div className="w-full bg-slate-950 h-1.5 rounded-full"><div className="bg-rose-500 h-1.5 rounded-full transition-all" style={{ width: `${calcPct(gameStats.panicZoneMakes, gameStats.panicZoneTotal)}%` }}></div></div>
+                          <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden"><div className="bg-rose-500 h-2 rounded-full transition-all" style={{ width: `${calcPct(selectedArchivedGame.stats.panicZoneMakes, selectedArchivedGame.stats.panicZoneTotal)}%` }}></div></div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Shot Location Advanced Attribute Tracker Array */}
-                    <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-4">
-                      <h3 className="text-xs text-slate-400 font-black tracking-wider uppercase mb-2.5 flex items-center gap-1.5"><Users /> Shot Location Analytics</h3>
-                      <div className="space-y-2">
+                    {/* Shot locations summary */}
+                    <div className="bg-slate-950 border border-slate-900 rounded-2xl p-5">
+                      <h3 className="text-xs text-slate-400 font-black tracking-wider uppercase mb-3 flex items-center gap-1.5">
+                        <Users /> Shot Location Analytics
+                      </h3>
+                      <div className="space-y-3">
                         <div>
-                          <div className="flex justify-between font-mono text-[10px] mb-0.5">
+                          <div className="flex justify-between font-mono text-xs mb-0.5">
                             <span className="text-purple-400 font-bold">Layups / Paint Looks</span>
-                            <span>{gameStats.layupMakes}/{gameStats.layupTotal} ({calcPct(gameStats.layupMakes, gameStats.layupTotal)}%)</span>
+                            <span>{selectedArchivedGame.stats.layupMakes}/{selectedArchivedGame.stats.layupTotal} ({calcPct(selectedArchivedGame.stats.layupMakes, selectedArchivedGame.stats.layupTotal)}%)</span>
                           </div>
-                          <div className="w-full bg-slate-950 h-1.5 rounded-full"><div className="bg-purple-400 h-1.5 rounded-full transition-all" style={{ width: `${calcPct(gameStats.layupMakes, gameStats.layupTotal)}%` }}></div></div>
+                          <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden"><div className="bg-purple-400 h-2 rounded-full transition-all" style={{ width: `${calcPct(selectedArchivedGame.stats.layupMakes, selectedArchivedGame.stats.layupTotal)}%` }}></div></div>
                         </div>
                         <div>
-                          <div className="flex justify-between font-mono text-[10px] mb-0.5">
+                          <div className="flex justify-between font-mono text-xs mb-0.5">
                             <span className="text-amber-400 font-bold">Mid-Range Jumpshots</span>
-                            <span>{gameStats.middyMakes}/{gameStats.middyTotal} ({calcPct(gameStats.middyMakes, gameStats.middyTotal)}%)</span>
+                            <span>{selectedArchivedGame.stats.middyMakes}/{selectedArchivedGame.stats.middyTotal} ({calcPct(selectedArchivedGame.stats.middyMakes, selectedArchivedGame.stats.middyTotal)}%)</span>
                           </div>
-                          <div className="w-full bg-slate-950 h-1.5 rounded-full"><div className="bg-amber-400 h-1.5 rounded-full transition-all" style={{ width: `${calcPct(gameStats.middyMakes, gameStats.middyTotal)}%` }}></div></div>
+                          <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden"><div className="bg-amber-400 h-2 rounded-full transition-all" style={{ width: `${calcPct(selectedArchivedGame.stats.middyMakes, selectedArchivedGame.stats.middyTotal)}%` }}></div></div>
                         </div>
                         <div>
-                          <div className="flex justify-between font-mono text-[10px] mb-0.5">
+                          <div className="flex justify-between font-mono text-xs mb-0.5">
                             <span className="text-indigo-400 font-bold">Perimeter 3-Pointers</span>
-                            <span>{gameStats.threeMakes}/{gameStats.threeTotal} ({calcPct(gameStats.threeMakes, gameStats.threeTotal)}%)</span>
+                            <span>{selectedArchivedGame.stats.threeMakes}/{selectedArchivedGame.stats.threeTotal} ({calcPct(selectedArchivedGame.stats.threeMakes, selectedArchivedGame.stats.threeTotal)}%)</span>
                           </div>
-                          <div className="w-full bg-slate-950 h-1.5 rounded-full"><div className="bg-indigo-400 h-1.5 rounded-full transition-all" style={{ width: `${calcPct(gameStats.threeMakes, gameStats.threeTotal)}%` }}></div></div>
+                          <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden"><div className="bg-indigo-400 h-2 rounded-full transition-all" style={{ width: `${calcPct(selectedArchivedGame.stats.threeMakes, selectedArchivedGame.stats.threeTotal)}%` }}></div></div>
                         </div>
                       </div>
                     </div>
+
                   </div>
 
-                  {/* ACTIVE LIVE LINEUP DEPLOYMENT SUB-PANEL (Substitution Control Suite) */}
-                  <div className="bg-slate-900/30 border border-slate-800 rounded-xl p-4">
-                    <h3 className="text-xs font-black text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-2">
-                      🔄 Live Lineup Control & Sub Panel
+                  {/* Historic Inclusivity Index list */}
+                  <div className="bg-slate-950 border border-slate-900 rounded-2xl p-5">
+                    <h3 className="text-xs font-black text-slate-200 mb-3 uppercase tracking-wide">
+                      Touches Per 5 Possessions (Inclusivity Volume)
                     </h3>
-                    <p className="text-[11px] text-slate-400 mb-2.5">Manage player rotations dynamically. Toggling a bench player automatically places them into active floor matrices.</p>
-                    <div className="flex flex-wrap gap-2 max-h-[110px] overflow-y-auto">
-                      {fullRoster.map((player) => (
-                        <button
-                          key={player.id}
-                          onClick={() => handleSubstitution(player.id)}
-                          className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 border transition-all ${
-                            player.active 
-                              ? 'bg-orange-500/10 border-orange-500 text-orange-400' 
-                              : 'bg-slate-950 border-slate-800 text-slate-500 hover:text-slate-400'
-                          }`}
-                        >
-                          <span className="font-mono text-[10px]">#{player.number}</span>
-                          <span className="max-w-[80px] truncate">{player.name}</span>
-                          <span className="text-[8px] uppercase tracking-tighter opacity-50">({player.active ? 'On Court' : 'Bench'})</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* REAL-TIME COMPLETED RUN FEEDBACK LOG TERMINAL */}
-                  <div className="bg-slate-900/30 border border-slate-800 rounded-xl p-4">
-                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
-                      📋 Live Sequence Outcome Log
-                    </h3>
-                    <div className="bg-slate-950 border border-slate-900 rounded-xl p-3 max-h-[95px] overflow-y-auto space-y-1.5 font-mono text-[11px] text-slate-400">
-                      {gameStats.liveTacticalNotes.length === 0 ? (
-                        <div className="text-slate-600 italic">No historical loops recorded yet. Commit a possession outcome to view real-time log data here.</div>
-                      ) : (
-                        gameStats.liveTacticalNotes.map((note, idx) => (
-                          <div key={idx} className="border-l-2 border-orange-500 pl-2 py-0.5 bg-slate-900/40 rounded-r">
-                            {note}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-
-                  {/* REPLACEMENT COMPONENT: LIVE TOUCH ECONOMY VOLUME PER FIVE POSSESSIONS */}
-                  <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl relative flex-1">
-                    <h3 className="text-sm font-black text-slate-200 mb-3 flex items-center gap-2 uppercase tracking-wide">
-                      <Clipboard /> Inclusivity Index: Touches Per 5 Possessions
-                    </h3>
-                    <p className="text-xs text-slate-400 mb-4 leading-normal">
-                      Measures player inclusion over standard 5-possession game segments. Exposes active ball handlers vs. isolated baseline ghosts. Updates automatically when sequence terminations are logged.
-                    </p>
-
-                    <div className="bg-slate-950 border border-slate-800/80 rounded-xl p-3 divide-y divide-slate-900">
-                      {/* Render only active floor nodes to give instant baseline indicators */}
-                      {activeOnCourtPlayers.map((player) => {
-                        const touchesPerFive = getTouchesPerFivePossessions(player.id);
-                        const cumulativeTouches = gameStats.playerTotalTouches[player.id] || 0;
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {selectedArchivedGame.roster.filter(p => p.active).map((player) => {
+                        const touchesPerFive = getTouchesPerFivePossessions(selectedArchivedGame.stats, player.id);
+                        const cumulative = selectedArchivedGame.stats.playerTotalTouches[player.id] || 0;
                         return (
-                          <div key={player.id} className="py-2.5 flex items-center justify-between text-xs font-mono">
-                            <div className="flex items-center gap-3">
-                              <span className="text-orange-400 font-bold w-6">#{player.number}</span>
-                              <span className="text-slate-200 font-bold font-sans text-sm">{player.name}</span>
-                              <span className="text-[10px] text-slate-500 bg-slate-900 border border-slate-800 px-1 py-0.5 rounded uppercase font-bold">{player.role}</span>
+                          <div key={player.id} className="bg-[#090d16] border border-slate-900 p-4 rounded-xl flex items-center justify-between text-xs font-mono">
+                            <div className="flex items-center gap-2">
+                              <span className="text-orange-400 font-bold w-5">#{player.number || "?"}</span>
+                              <span className="text-slate-200 font-bold font-sans text-sm">{player.name || "Anon"}</span>
                             </div>
                             <div className="text-right">
-                              <div className="text-slate-100 font-black text-sm">{touchesPerFive} <span className="text-[10px] text-slate-400 font-normal">Touches / 5 Poss</span></div>
-                              <div className="text-[10px] text-slate-600">Total: {cumulativeTouches} Touches</div>
+                              <div className="text-slate-100 font-black text-sm">{touchesPerFive} <span className="text-[10px] text-slate-400 font-normal">Touches/5Poss</span></div>
+                              <div className="text-[10px] text-slate-600">Total: {cumulative}</div>
                             </div>
                           </div>
                         );
                       })}
                     </div>
-                    
-                    <div className="mt-4 flex items-center justify-between text-[11px] font-mono text-slate-500 bg-slate-950/60 p-2 rounded-lg border border-slate-900">
-                      <span>Global Run Count: {gameStats.totalPossessions}</span>
-                      <span>Ball Movement Volume Index: {gameStats.avgSecondsPerTouch} Touches/Poss</span>
+                  </div>
+
+                  {/* Historical run logs list */}
+                  <div className="bg-slate-950 border border-slate-900 rounded-2xl p-5">
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-2.5">
+                      Session Possession History Logs
+                    </h3>
+                    <div className="max-h-[160px] overflow-y-auto space-y-2 font-mono text-xs text-slate-400">
+                      {selectedArchivedGame.stats.liveTacticalNotes.map((note, idx) => (
+                        <div key={idx} className="border-l-2 border-slate-800 pl-2 py-0.5">
+                          {note}
+                        </div>
+                      ))}
                     </div>
                   </div>
 
-                </section>
-              </main>
+                </main>
+              )}
+
+              {/* Bottom Brand Footer Accent */}
+              <footer className="border-t border-slate-900 bg-[#090d16]/30 px-6 py-4 text-center text-[10px] font-mono text-slate-600">
+                &copy; 2026 The Touch Economy Telemetry Board. Powered by Google Cloud.
+              </footer>
+
             </div>
           );
         }
